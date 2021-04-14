@@ -37,3 +37,7 @@ Shouting out to:
 
   for their DER to (R,S) and (R,S) to DER methods
   found [here](https://github.com/codelittinc/gobitauth/blob/master/sign.go#L70)
+
+* [karalabe](https://github.com/karalabe)
+
+  for reviewing my code

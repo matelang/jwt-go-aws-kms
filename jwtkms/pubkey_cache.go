@@ -10,6 +10,12 @@ type pubKeyCache struct {
 	mutex   sync.RWMutex
 }
 
+func newPubKeyCache() *pubKeyCache {
+	return &pubKeyCache{
+		pubKeys: make(map[string]crypto.PublicKey),
+	}
+}
+
 func (c *pubKeyCache) Add(keyId string, key crypto.PublicKey) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()

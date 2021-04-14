@@ -15,12 +15,6 @@ var (
 	SigningMethodRs512 *KmsRsaSigningMethod
 )
 
-func newPubKeyCache() *pubKeyCache {
-	return &pubKeyCache{
-		pubKeys: make(map[string]crypto.PublicKey),
-	}
-}
-
 var pubkeyCache = newPubKeyCache()
 
 func init() {
