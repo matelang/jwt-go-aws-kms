@@ -209,27 +209,3 @@ func pointsFromDER(der []byte) (R, S *big.Int) {
 
 	return
 }
-
-//
-//func NewKmsEcdsaSigningMethod(keyId string) (jwt.SigningMethod, error) {
-//	svc := kms.New(sess)
-//	describeKeyOutput, err := svc.DescribeKey(&kms.DescribeKeyInput{
-//		KeyId: aws.String(keyId),
-//	})
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	//TODO check key meta
-//	log.Info().
-//		Str("arn", *describeKeyOutput.KeyMetadata.Arn).
-//		Msg("found KMS key")
-//
-//	m := &KmsEcdsaSigningMethod{
-//		svc:   svc,
-//		hash:  crypto.SHA256,
-//		keyId: keyId,
-//	}
-//
-//	return m, nil
-//}
