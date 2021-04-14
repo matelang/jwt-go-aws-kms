@@ -47,56 +47,9 @@ func (m *KmsEcdsaSigningMethod) Verify(signingString, signature string, keyConfi
 	s := big.NewInt(0).SetBytes(sig[m.keySize:])
 
 	if cfg.VerifyWithKMS {
-		derSig := pointsToDER(r, s)
-
-		verifyInput := &kms.VerifyInput{
-			KeyId:            aws.String(cfg.KmsKeyId),
-			Message:          hashedSigningString,
-			MessageType:      aws.String(messageTypeDigest),
-			Signature:        derSig,
-			SigningAlgorithm: aws.String(m.algo),
-		}
-
-		verifyOutput, err := cfg.Svc.Verify(verifyInput)
-		if err != nil {
-			return err
-		}
-
-		if !*verifyOutput.SignatureValid {
-			return jwt.ErrSignatureInvalid
-		}
-
-		return nil
+		return kmsVerifyEcdsa(cfg, m.algo, hashedSigningString, r, s)
 	} else {
-		var ecdsaPublicKey *ecdsa.PublicKey
-		cachedKey := pubkeyCache.Get(cfg.KmsKeyId)
-		if cachedKey == nil {
-			getPubKeyOutput, err := cfg.Svc.GetPublicKey(&kms.GetPublicKeyInput{
-				KeyId: aws.String(cfg.KmsKeyId),
-			})
-			if err != nil {
-				return err
-			}
-
-			cachedKey, err = x509.ParsePKIXPublicKey(getPubKeyOutput.PublicKey)
-			if err != nil {
-				return err
-			}
-
-			pubkeyCache.Add(cfg.KmsKeyId, cachedKey)
-		}
-
-		ecdsaPublicKey, ok = cachedKey.(*ecdsa.PublicKey)
-		if !ok {
-			return errors.New("invalid key type for key")
-		}
-
-		valid := ecdsa.Verify(ecdsaPublicKey, hashedSigningString, r, s)
-		if !valid {
-			return jwt.ErrSignatureInvalid
-		}
-
-		return nil
+		return localVerifyEcdsa(cfg, hashedSigningString, r, s)
 	}
 }
 
@@ -148,6 +101,61 @@ func (m *KmsEcdsaSigningMethod) Sign(signingString string, keyConfig interface{}
 	out := append(rBytesPadded, sBytesPadded...)
 
 	return jwt.EncodeSegment(out), nil
+}
+
+func kmsVerifyEcdsa(cfg *KmsConfig, algo string, hashedSigningString []byte, r *big.Int, s *big.Int) error {
+	derSig := pointsToDER(r, s)
+
+	verifyInput := &kms.VerifyInput{
+		KeyId:            aws.String(cfg.KmsKeyId),
+		Message:          hashedSigningString,
+		MessageType:      aws.String(messageTypeDigest),
+		Signature:        derSig,
+		SigningAlgorithm: aws.String(algo),
+	}
+
+	verifyOutput, err := cfg.Svc.Verify(verifyInput)
+	if err != nil {
+		return err
+	}
+
+	if !*verifyOutput.SignatureValid {
+		return jwt.ErrSignatureInvalid
+	}
+
+	return nil
+}
+
+func localVerifyEcdsa(cfg *KmsConfig, hashedSigningString []byte, r *big.Int, s *big.Int) error {
+	var ecdsaPublicKey *ecdsa.PublicKey
+	cachedKey := pubkeyCache.Get(cfg.KmsKeyId)
+	if cachedKey == nil {
+		getPubKeyOutput, err := cfg.Svc.GetPublicKey(&kms.GetPublicKeyInput{
+			KeyId: aws.String(cfg.KmsKeyId),
+		})
+		if err != nil {
+			return err
+		}
+
+		cachedKey, err = x509.ParsePKIXPublicKey(getPubKeyOutput.PublicKey)
+		if err != nil {
+			return err
+		}
+
+		pubkeyCache.Add(cfg.KmsKeyId, cachedKey)
+	}
+
+	ecdsaPublicKey, ok := cachedKey.(*ecdsa.PublicKey)
+	if !ok {
+		return errors.New("invalid key type for key")
+	}
+
+	valid := ecdsa.Verify(ecdsaPublicKey, hashedSigningString, r, s)
+	if !valid {
+		return jwt.ErrSignatureInvalid
+	}
+
+	return nil
 }
 
 // From https://github.com/codelittinc/gobitauth/blob/master/sign.go

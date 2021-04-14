@@ -36,50 +36,58 @@ func (m *KmsRsaSigningMethod) Verify(signingString, signature string, keyConfig 
 	hashedSigningString := hasher.Sum(nil)
 
 	if cfg.VerifyWithKMS {
-		verifyInput := &kms.VerifyInput{
-			KeyId:            aws.String(cfg.KmsKeyId),
-			Message:          hashedSigningString,
-			MessageType:      aws.String(messageTypeDigest),
-			Signature:        sig,
-			SigningAlgorithm: aws.String(m.algo),
-		}
+		return kmsVerifyRsa(cfg, m.algo, hashedSigningString, sig)
+	} else {
+		return localKmsVerifyRsa(cfg, m.hash, hashedSigningString, sig)
+	}
+}
 
-		verifyOutput, err := cfg.Svc.Verify(verifyInput)
+func kmsVerifyRsa(cfg *KmsConfig, algo string, hashedSigningString []byte, sig []byte) error {
+	verifyInput := &kms.VerifyInput{
+		KeyId:            aws.String(cfg.KmsKeyId),
+		Message:          hashedSigningString,
+		MessageType:      aws.String(messageTypeDigest),
+		Signature:        sig,
+		SigningAlgorithm: aws.String(algo),
+	}
+
+	verifyOutput, err := cfg.Svc.Verify(verifyInput)
+	if err != nil {
+		return err
+	}
+
+	if !*verifyOutput.SignatureValid {
+		return jwt.ErrSignatureInvalid
+	}
+
+	return nil
+}
+
+func localKmsVerifyRsa(cfg *KmsConfig, hash crypto.Hash, hashedSigningString []byte, sig []byte) error {
+	var rsaPublicKey *rsa.PublicKey
+	cachedKey := pubkeyCache.Get(cfg.KmsKeyId)
+	if cachedKey == nil {
+		getPubKeyOutput, err := cfg.Svc.GetPublicKey(&kms.GetPublicKeyInput{
+			KeyId: aws.String(cfg.KmsKeyId),
+		})
 		if err != nil {
 			return err
 		}
 
-		if !*verifyOutput.SignatureValid {
-			return jwt.ErrSignatureInvalid
+		cachedKey, err = x509.ParsePKIXPublicKey(getPubKeyOutput.PublicKey)
+		if err != nil {
+			return err
 		}
 
-		return nil
-	} else {
-		var rsaPublicKey *rsa.PublicKey
-		cachedKey := pubkeyCache.Get(cfg.KmsKeyId)
-		if cachedKey == nil {
-			getPubKeyOutput, err := cfg.Svc.GetPublicKey(&kms.GetPublicKeyInput{
-				KeyId: aws.String(cfg.KmsKeyId),
-			})
-			if err != nil {
-				return err
-			}
-
-			cachedKey, err = x509.ParsePKIXPublicKey(getPubKeyOutput.PublicKey)
-			if err != nil {
-				return err
-			}
-
-			pubkeyCache.Add(cfg.KmsKeyId, cachedKey)
-		}
-
-		rsaPublicKey, ok = cachedKey.(*rsa.PublicKey)
-		if !ok {
-			return errors.New("invalid key type for key")
-		}
-
-		return rsa.VerifyPKCS1v15(rsaPublicKey, m.hash, hashedSigningString, sig)
+		pubkeyCache.Add(cfg.KmsKeyId, cachedKey)
 	}
+
+	rsaPublicKey, ok := cachedKey.(*rsa.PublicKey)
+	if !ok {
+		return errors.New("invalid key type for key")
+	}
+
+	return rsa.VerifyPKCS1v15(rsaPublicKey, hash, hashedSigningString, sig)
 }
 
 func (m *KmsRsaSigningMethod) Sign(signingString string, keyConfig interface{}) (string, error) {
