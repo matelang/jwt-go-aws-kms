@@ -16,6 +16,10 @@ type KmsRsaSigningMethod struct {
 	hash crypto.Hash
 }
 
+func (m *KmsRsaSigningMethod) Alg() string {
+	return m.name
+}
+
 func (m *KmsRsaSigningMethod) Verify(signingString, signature string, keyConfig interface{}) error {
 	cfg, ok := keyConfig.(*KmsConfig)
 	if !ok {
@@ -40,6 +44,35 @@ func (m *KmsRsaSigningMethod) Verify(signingString, signature string, keyConfig 
 	} else {
 		return localKmsVerifyRsa(cfg, m.hash, hashedSigningString, sig)
 	}
+}
+
+func (m *KmsRsaSigningMethod) Sign(signingString string, keyConfig interface{}) (string, error) {
+	cfg, ok := keyConfig.(*KmsConfig)
+	if !ok {
+		return "", jwt.ErrInvalidKeyType
+	}
+
+	if !m.hash.Available() {
+		return "", jwt.ErrHashUnavailable
+	}
+
+	hasher := m.hash.New()
+	hasher.Write([]byte(signingString))
+	hashedSigningString := hasher.Sum(nil)
+
+	signInput := &kms.SignInput{
+		KeyId:            aws.String(cfg.KmsKeyId),
+		Message:          hashedSigningString,
+		MessageType:      aws.String(messageTypeDigest),
+		SigningAlgorithm: aws.String(m.algo),
+	}
+
+	signOutput, err := cfg.Svc.Sign(signInput)
+	if err != nil {
+		return "", err
+	}
+
+	return jwt.EncodeSegment(signOutput.Signature), nil
 }
 
 func kmsVerifyRsa(cfg *KmsConfig, algo string, hashedSigningString []byte, sig []byte) error {
@@ -88,37 +121,4 @@ func localKmsVerifyRsa(cfg *KmsConfig, hash crypto.Hash, hashedSigningString []b
 	}
 
 	return rsa.VerifyPKCS1v15(rsaPublicKey, hash, hashedSigningString, sig)
-}
-
-func (m *KmsRsaSigningMethod) Sign(signingString string, keyConfig interface{}) (string, error) {
-	cfg, ok := keyConfig.(*KmsConfig)
-	if !ok {
-		return "", jwt.ErrInvalidKeyType
-	}
-
-	if !m.hash.Available() {
-		return "", jwt.ErrHashUnavailable
-	}
-
-	hasher := m.hash.New()
-	hasher.Write([]byte(signingString))
-	hashedSigningString := hasher.Sum(nil)
-
-	signInput := &kms.SignInput{
-		KeyId:            aws.String(cfg.KmsKeyId),
-		Message:          hashedSigningString,
-		MessageType:      aws.String(messageTypeDigest),
-		SigningAlgorithm: aws.String(m.algo),
-	}
-
-	signOutput, err := cfg.Svc.Sign(signInput)
-	if err != nil {
-		return "", err
-	}
-
-	return jwt.EncodeSegment(signOutput.Signature), nil
-}
-
-func (m *KmsRsaSigningMethod) Alg() string {
-	return m.name
 }
