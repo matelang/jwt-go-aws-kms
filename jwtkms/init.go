@@ -3,7 +3,6 @@ package jwtkms
 import (
 	"crypto"
 	"github.com/dgrijalva/jwt-go"
-	"sync"
 )
 
 var (
@@ -16,10 +15,13 @@ var (
 	SigningMethodRs512 *KmsRsaSigningMethod
 )
 
-var pubkeyCache *pubKeyCache = &pubKeyCache{
-	pubKeys: make(map[string]crypto.PublicKey),
-	mutex:   &sync.Mutex{},
+func newPubKeyCache() *pubKeyCache {
+	return &pubKeyCache{
+		pubKeys: make(map[string]crypto.PublicKey),
+	}
 }
+
+var pubkeyCache = newPubKeyCache()
 
 func init() {
 	registerEcdsaSigningMethods()

@@ -43,14 +43,14 @@ func (m *KmsEcdsaSigningMethod) Verify(signingString, signature string, keyConfi
 	hasher.Write([]byte(signingString))
 	hashedSigningString := hasher.Sum(nil)
 
-	r := big.NewInt(0).SetBytes(sig[:m.keySize])
-	s := big.NewInt(0).SetBytes(sig[m.keySize:])
+	r := new(big.Int).SetBytes(sig[:m.keySize])
+	s := new(big.Int).SetBytes(sig[m.keySize:])
 
 	if cfg.VerifyWithKMS {
 		return kmsVerifyEcdsa(cfg, m.algo, hashedSigningString, r, s)
-	} else {
-		return localVerifyEcdsa(cfg, hashedSigningString, r, s)
 	}
+
+	return localVerifyEcdsa(cfg, hashedSigningString, r, s)
 }
 
 func (m *KmsEcdsaSigningMethod) Sign(signingString string, keyConfig interface{}) (string, error) {

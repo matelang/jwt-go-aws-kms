@@ -41,9 +41,9 @@ func (m *KmsRsaSigningMethod) Verify(signingString, signature string, keyConfig 
 
 	if cfg.VerifyWithKMS {
 		return kmsVerifyRsa(cfg, m.algo, hashedSigningString, sig)
-	} else {
-		return localKmsVerifyRsa(cfg, m.hash, hashedSigningString, sig)
 	}
+
+	return localKmsVerifyRsa(cfg, m.hash, hashedSigningString, sig)
 }
 
 func (m *KmsRsaSigningMethod) Sign(signingString string, keyConfig interface{}) (string, error) {

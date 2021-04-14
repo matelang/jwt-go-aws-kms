@@ -7,15 +7,17 @@ import (
 
 type pubKeyCache struct {
 	pubKeys map[string]crypto.PublicKey
-	mutex   *sync.Mutex
+	mutex   sync.RWMutex
 }
 
 func (c *pubKeyCache) Add(keyId string, key crypto.PublicKey) {
 	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	c.pubKeys[keyId] = key
-	c.mutex.Unlock()
 }
 
 func (c *pubKeyCache) Get(keyId string) crypto.PublicKey {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
 	return c.pubKeys[keyId]
 }
