@@ -10,15 +10,6 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
-/*
-RSA Algos
----------
-
-RSA_2048
-RSA_3072
-RSA_4096
-*/
-
 type KmsRsaSigningMethod struct {
 	name string
 	algo string

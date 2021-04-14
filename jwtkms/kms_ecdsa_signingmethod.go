@@ -12,14 +12,6 @@ import (
 	"math/big"
 )
 
-/* ECC Algorithms
-ECC_NIST_P256
-ECC_NIST_P384
-ECC_NIST_P521
-
-ECC_SECG_P256K1 - is not supported by JWT
-*/
-
 type KmsEcdsaSigningMethod struct {
 	name      string
 	algo      string
