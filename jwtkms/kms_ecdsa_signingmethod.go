@@ -12,6 +12,7 @@ import (
 	"math/big"
 )
 
+// KmsEcdsaSigningMethod is an ECDSA implementation of the SigningMethod interface that uses KMS to Sign/Verify JWTs
 type KmsEcdsaSigningMethod struct {
 	name      string
 	algo      string

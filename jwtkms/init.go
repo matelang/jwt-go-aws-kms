@@ -1,3 +1,11 @@
+// Package jwtkms provides an AWS KMS(Key Management Service) adapter to be used with the popular GoLang JWT library
+//
+// Importing this package will auto register the provided SigningMethods and make them available for use.
+// Make sure to use a keyConfig with a keyId that provides the requested SigningMethod's algorithm for Sign/Verify.
+//
+// By default JWT signature verification will happen by downloading and caching the public key of the KMS key,
+// but you can also set VerifyWithKMS to true if you want the KMS to verify the signature instead.
+//
 package jwtkms
 
 import (

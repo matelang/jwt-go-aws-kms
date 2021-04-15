@@ -10,6 +10,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
+//KmsRsaSigningMethod is an RSA implementation of the SigningMethod interface that uses KMS to Sign/Verify JWTs
 type KmsRsaSigningMethod struct {
 	name string
 	algo string
