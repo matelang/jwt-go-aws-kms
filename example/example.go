@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const keyId = "bc1891a3-aa0e-4115-a432-2083bd00f9ad"
+const keyId = "aa2f90bf-f09f-42b7-b4f3-2083bd00f9ad"
 
 func main() {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{

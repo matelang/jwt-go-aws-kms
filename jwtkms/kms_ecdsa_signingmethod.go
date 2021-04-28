@@ -14,11 +14,12 @@ import (
 
 // KmsEcdsaSigningMethod is an ECDSA implementation of the SigningMethod interface that uses KMS to Sign/Verify JWTs
 type KmsEcdsaSigningMethod struct {
-	name      string
-	algo      string
-	hash      crypto.Hash
-	keySize   int
-	curveBits int
+	name                  string
+	algo                  string
+	hash                  crypto.Hash
+	keySize               int
+	curveBits             int
+	fallbackSigningMethod *jwt.SigningMethodECDSA
 }
 
 func (m *KmsEcdsaSigningMethod) Alg() string {
@@ -28,6 +29,11 @@ func (m *KmsEcdsaSigningMethod) Alg() string {
 func (m *KmsEcdsaSigningMethod) Verify(signingString, signature string, keyConfig interface{}) error {
 	cfg, ok := keyConfig.(*KmsConfig)
 	if !ok {
+		_, isBuiltInEcdsa := keyConfig.(*ecdsa.PublicKey)
+		if isBuiltInEcdsa {
+			return m.fallbackSigningMethod.Verify(signingString, signature, keyConfig)
+		}
+
 		return jwt.ErrInvalidKeyType
 	}
 
@@ -57,6 +63,11 @@ func (m *KmsEcdsaSigningMethod) Verify(signingString, signature string, keyConfi
 func (m *KmsEcdsaSigningMethod) Sign(signingString string, keyConfig interface{}) (string, error) {
 	cfg, ok := keyConfig.(*KmsConfig)
 	if !ok {
+		_, isBuiltInEcdsa := keyConfig.(*ecdsa.PublicKey)
+		if isBuiltInEcdsa {
+			return m.fallbackSigningMethod.Sign(signingString, keyConfig)
+		}
+
 		return "", jwt.ErrInvalidKeyType
 	}
 

@@ -12,9 +12,10 @@ import (
 
 //KmsRsaSigningMethod is an RSA implementation of the SigningMethod interface that uses KMS to Sign/Verify JWTs
 type KmsRsaSigningMethod struct {
-	name string
-	algo string
-	hash crypto.Hash
+	name                  string
+	algo                  string
+	hash                  crypto.Hash
+	fallbackSigningMethod *jwt.SigningMethodRSA
 }
 
 func (m *KmsRsaSigningMethod) Alg() string {
@@ -24,6 +25,11 @@ func (m *KmsRsaSigningMethod) Alg() string {
 func (m *KmsRsaSigningMethod) Verify(signingString, signature string, keyConfig interface{}) error {
 	cfg, ok := keyConfig.(*KmsConfig)
 	if !ok {
+		_, isBuiltInRsa := keyConfig.(*rsa.PublicKey)
+		if isBuiltInRsa {
+			return m.fallbackSigningMethod.Verify(signingString, signature, keyConfig)
+		}
+
 		return jwt.ErrInvalidKeyType
 	}
 
@@ -50,6 +56,11 @@ func (m *KmsRsaSigningMethod) Verify(signingString, signature string, keyConfig 
 func (m *KmsRsaSigningMethod) Sign(signingString string, keyConfig interface{}) (string, error) {
 	cfg, ok := keyConfig.(*KmsConfig)
 	if !ok {
+		_, isBuiltInRsa := keyConfig.(*rsa.PublicKey)
+		if isBuiltInRsa {
+			return m.fallbackSigningMethod.Sign(signingString, keyConfig)
+		}
+
 		return "", jwt.ErrInvalidKeyType
 	}
 
