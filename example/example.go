@@ -1,25 +1,28 @@
 package main
 
 import (
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/matelang/jwt-go-aws-kms/v2/jwtkms"
+	"context"
 	"log"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
+	"github.com/dgrijalva/jwt-go"
+	"github.com/matelang/jwt-go-aws-kms/v2/jwtkms"
 )
 
-const keyId = "aa2f90bf-f09f-42b7-b4f3-2083bd00f9ad"
+const keyID = "aa2f90bf-f09f-42b7-b4f3-2083bd00f9ad"
 
 func main() {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	}))
-	svc := kms.New(sess)
+	awsCfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion("eu-central-1"))
+	if err != nil {
+		panic(err)
+	}
 
-	keyConfig := &jwtkms.KmsConfig{
-		Svc:      svc,
-		KmsKeyId: keyId,
+	kmsConfig := &jwtkms.Config{
+		KMSClient: kms.NewFromConfig(awsCfg),
+		KMSKeyID:  keyID,
 	}
 
 	now := time.Now()
@@ -33,7 +36,7 @@ func main() {
 		Subject:   "john.doe@example.com",
 	})
 
-	str, err := jwtToken.SignedString(keyConfig)
+	str, err := jwtToken.SignedString(kmsConfig)
 
 	if err != nil {
 		log.Fatalf("can not sign JWT %s", err)
@@ -41,11 +44,13 @@ func main() {
 	log.Printf("Signed JWT %s\n", str)
 
 	claims := jwt.StandardClaims{}
+
 	_, err = jwt.ParseWithClaims(str, &claims, func(token *jwt.Token) (interface{}, error) {
-		return keyConfig, nil
+		return kmsConfig, nil
 	})
 	if err != nil {
 		log.Fatalf("can not parse/verify token %s", err)
 	}
+
 	log.Printf("Parsed and validated token with claims %v", claims)
 }

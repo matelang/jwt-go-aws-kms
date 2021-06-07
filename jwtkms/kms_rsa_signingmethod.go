@@ -5,12 +5,14 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"errors"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/kms"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
+	"github.com/aws/aws-sdk-go-v2/service/kms/types"
 	"github.com/dgrijalva/jwt-go"
 )
 
-//KmsRsaSigningMethod is an RSA implementation of the SigningMethod interface that uses KMS to Sign/Verify JWTs
+// KmsRsaSigningMethod is an RSA implementation of the SigningMethod interface that uses KMS to Sign/Verify JWTs.
 type KmsRsaSigningMethod struct {
 	name                  string
 	algo                  string
@@ -23,7 +25,7 @@ func (m *KmsRsaSigningMethod) Alg() string {
 }
 
 func (m *KmsRsaSigningMethod) Verify(signingString, signature string, keyConfig interface{}) error {
-	cfg, ok := keyConfig.(*KmsConfig)
+	cfg, ok := keyConfig.(*Config)
 	if !ok {
 		_, isBuiltInRsa := keyConfig.(*rsa.PublicKey)
 		if isBuiltInRsa {
@@ -54,7 +56,7 @@ func (m *KmsRsaSigningMethod) Verify(signingString, signature string, keyConfig 
 }
 
 func (m *KmsRsaSigningMethod) Sign(signingString string, keyConfig interface{}) (string, error) {
-	cfg, ok := keyConfig.(*KmsConfig)
+	cfg, ok := keyConfig.(*Config)
 	if !ok {
 		_, isBuiltInRsa := keyConfig.(*rsa.PublicKey)
 		if isBuiltInRsa {
@@ -73,13 +75,13 @@ func (m *KmsRsaSigningMethod) Sign(signingString string, keyConfig interface{}) 
 	hashedSigningString := hasher.Sum(nil)
 
 	signInput := &kms.SignInput{
-		KeyId:            aws.String(cfg.KmsKeyId),
+		KeyId:            aws.String(cfg.KMSKeyID),
 		Message:          hashedSigningString,
-		MessageType:      aws.String(messageTypeDigest),
-		SigningAlgorithm: aws.String(m.algo),
+		MessageType:      types.MessageType(messageTypeDigest),
+		SigningAlgorithm: types.SigningAlgorithmSpec(m.algo),
 	}
 
-	signOutput, err := cfg.Svc.Sign(signInput)
+	signOutput, err := cfg.KMSClient.Sign(cfg.Ctx, signInput)
 	if err != nil {
 		return "", err
 	}
@@ -87,33 +89,34 @@ func (m *KmsRsaSigningMethod) Sign(signingString string, keyConfig interface{}) 
 	return jwt.EncodeSegment(signOutput.Signature), nil
 }
 
-func kmsVerifyRsa(cfg *KmsConfig, algo string, hashedSigningString []byte, sig []byte) error {
+func kmsVerifyRsa(cfg *Config, algo string, hashedSigningString []byte, sig []byte) error {
 	verifyInput := &kms.VerifyInput{
-		KeyId:            aws.String(cfg.KmsKeyId),
+		KeyId:            aws.String(cfg.KMSKeyID),
 		Message:          hashedSigningString,
-		MessageType:      aws.String(messageTypeDigest),
 		Signature:        sig,
-		SigningAlgorithm: aws.String(algo),
+		MessageType:      types.MessageType(messageTypeDigest),
+		SigningAlgorithm: types.SigningAlgorithmSpec(algo),
 	}
 
-	verifyOutput, err := cfg.Svc.Verify(verifyInput)
+	verifyOutput, err := cfg.KMSClient.Verify(cfg.Ctx, verifyInput)
 	if err != nil {
 		return err
 	}
 
-	if !*verifyOutput.SignatureValid {
+	if !verifyOutput.SignatureValid {
 		return jwt.ErrSignatureInvalid
 	}
 
 	return nil
 }
 
-func localKmsVerifyRsa(cfg *KmsConfig, hash crypto.Hash, hashedSigningString []byte, sig []byte) error {
+func localKmsVerifyRsa(cfg *Config, hash crypto.Hash, hashedSigningString []byte, sig []byte) error {
 	var rsaPublicKey *rsa.PublicKey
-	cachedKey := pubkeyCache.Get(cfg.KmsKeyId)
+
+	cachedKey := pubkeyCache.Get(cfg.KMSKeyID)
 	if cachedKey == nil {
-		getPubKeyOutput, err := cfg.Svc.GetPublicKey(&kms.GetPublicKeyInput{
-			KeyId: aws.String(cfg.KmsKeyId),
+		getPubKeyOutput, err := cfg.KMSClient.GetPublicKey(cfg.Ctx, &kms.GetPublicKeyInput{
+			KeyId: aws.String(cfg.KMSKeyID),
 		})
 		if err != nil {
 			return err
@@ -124,7 +127,7 @@ func localKmsVerifyRsa(cfg *KmsConfig, hash crypto.Hash, hashedSigningString []b
 			return err
 		}
 
-		pubkeyCache.Add(cfg.KmsKeyId, cachedKey)
+		pubkeyCache.Add(cfg.KMSKeyID, cachedKey)
 	}
 
 	rsaPublicKey, ok := cachedKey.(*rsa.PublicKey)

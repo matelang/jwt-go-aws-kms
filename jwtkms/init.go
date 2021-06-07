@@ -10,6 +10,7 @@ package jwtkms
 
 import (
 	"crypto"
+
 	"github.com/dgrijalva/jwt-go"
 )
 
@@ -39,6 +40,7 @@ func registerEcdsaSigningMethods() {
 		curveBits:             256,
 		fallbackSigningMethod: jwt.SigningMethodES256,
 	}
+
 	jwt.RegisterSigningMethod(SigningMethodKmsEcdsa256.Alg(), func() jwt.SigningMethod {
 		return SigningMethodKmsEcdsa256
 	})
@@ -51,6 +53,7 @@ func registerEcdsaSigningMethods() {
 		curveBits:             384,
 		fallbackSigningMethod: jwt.SigningMethodES384,
 	}
+
 	jwt.RegisterSigningMethod(jwt.SigningMethodES384.Alg(), func() jwt.SigningMethod {
 		return SigningMethodKmsEcdsa384
 	})
@@ -63,6 +66,7 @@ func registerEcdsaSigningMethods() {
 		curveBits:             521,
 		fallbackSigningMethod: jwt.SigningMethodES512,
 	}
+
 	jwt.RegisterSigningMethod(jwt.SigningMethodES512.Alg(), func() jwt.SigningMethod {
 		return SigningMethodKmsEcdsa512
 	})
@@ -75,6 +79,7 @@ func registerRsaSigningMethods() {
 		hash:                  crypto.SHA256,
 		fallbackSigningMethod: jwt.SigningMethodRS256,
 	}
+
 	jwt.RegisterSigningMethod(SigningMethodRs256.Alg(), func() jwt.SigningMethod {
 		return SigningMethodRs256
 	})
@@ -85,6 +90,7 @@ func registerRsaSigningMethods() {
 		hash:                  crypto.SHA384,
 		fallbackSigningMethod: jwt.SigningMethodRS384,
 	}
+
 	jwt.RegisterSigningMethod(SigningMethodRs384.Alg(), func() jwt.SigningMethod {
 		return SigningMethodRs384
 	})
@@ -95,6 +101,7 @@ func registerRsaSigningMethods() {
 		hash:                  crypto.SHA512,
 		fallbackSigningMethod: jwt.SigningMethodRS512,
 	}
+
 	jwt.RegisterSigningMethod(SigningMethodRs512.Alg(), func() jwt.SigningMethod {
 		return SigningMethodRs512
 	})

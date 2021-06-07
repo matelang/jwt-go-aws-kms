@@ -1,18 +1,21 @@
 package jwtkms
 
 import (
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/asn1"
 	"errors"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/dgrijalva/jwt-go"
 	"math/big"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
+	"github.com/aws/aws-sdk-go-v2/service/kms/types"
+	"github.com/dgrijalva/jwt-go"
 )
 
-// KmsEcdsaSigningMethod is an ECDSA implementation of the SigningMethod interface that uses KMS to Sign/Verify JWTs
+// KmsEcdsaSigningMethod is an ECDSA implementation of the SigningMethod interface that uses KMS to Sign/Verify JWTs.
 type KmsEcdsaSigningMethod struct {
 	name                  string
 	algo                  string
@@ -27,7 +30,7 @@ func (m *KmsEcdsaSigningMethod) Alg() string {
 }
 
 func (m *KmsEcdsaSigningMethod) Verify(signingString, signature string, keyConfig interface{}) error {
-	cfg, ok := keyConfig.(*KmsConfig)
+	cfg, ok := keyConfig.(*Config)
 	if !ok {
 		_, isBuiltInEcdsa := keyConfig.(*ecdsa.PublicKey)
 		if isBuiltInEcdsa {
@@ -54,14 +57,14 @@ func (m *KmsEcdsaSigningMethod) Verify(signingString, signature string, keyConfi
 	s := new(big.Int).SetBytes(sig[m.keySize:])
 
 	if cfg.VerifyWithKMS {
-		return kmsVerifyEcdsa(cfg, m.algo, hashedSigningString, r, s)
+		return kmsVerifyEcdsa(cfg.Ctx, cfg, m.algo, hashedSigningString, r, s)
 	}
 
 	return localVerifyEcdsa(cfg, hashedSigningString, r, s)
 }
 
 func (m *KmsEcdsaSigningMethod) Sign(signingString string, keyConfig interface{}) (string, error) {
-	cfg, ok := keyConfig.(*KmsConfig)
+	cfg, ok := keyConfig.(*Config)
 	if !ok {
 		_, isBuiltInEcdsa := keyConfig.(*ecdsa.PublicKey)
 		if isBuiltInEcdsa {
@@ -80,13 +83,13 @@ func (m *KmsEcdsaSigningMethod) Sign(signingString string, keyConfig interface{}
 	hashedSigningString := hasher.Sum(nil)
 
 	signInput := &kms.SignInput{
-		KeyId:            aws.String(cfg.KmsKeyId),
+		KeyId:            aws.String(cfg.KMSKeyID),
 		Message:          hashedSigningString,
-		MessageType:      aws.String(messageTypeDigest),
-		SigningAlgorithm: aws.String(m.algo),
+		MessageType:      types.MessageType(messageTypeDigest),
+		SigningAlgorithm: types.SigningAlgorithmSpec(m.algo),
 	}
 
-	signOutput, err := cfg.Svc.Sign(signInput)
+	signOutput, err := cfg.KMSClient.Sign(cfg.Ctx, signInput)
 	if err != nil {
 		return "", err
 	}
@@ -104,7 +107,7 @@ func (m *KmsEcdsaSigningMethod) Sign(signingString string, keyConfig interface{}
 	curveBits := m.curveBits
 	keyBytes := curveBits / 8
 	if curveBits%8 > 0 {
-		keyBytes += 1
+		keyBytes++
 	}
 
 	// We serialize the outpus (r and s) into big-endian byte arrays and pad
@@ -123,7 +126,7 @@ func (m *KmsEcdsaSigningMethod) Sign(signingString string, keyConfig interface{}
 	return jwt.EncodeSegment(out), nil
 }
 
-func kmsVerifyEcdsa(cfg *KmsConfig, algo string, hashedSigningString []byte, r *big.Int, s *big.Int) error {
+func kmsVerifyEcdsa(ctx context.Context, cfg *Config, algo string, hashedSigningString []byte, r *big.Int, s *big.Int) error {
 	p := struct {
 		R *big.Int
 		S *big.Int
@@ -135,31 +138,32 @@ func kmsVerifyEcdsa(cfg *KmsConfig, algo string, hashedSigningString []byte, r *
 	}
 
 	verifyInput := &kms.VerifyInput{
-		KeyId:            aws.String(cfg.KmsKeyId),
+		KeyId:            aws.String(cfg.KMSKeyID),
 		Message:          hashedSigningString,
-		MessageType:      aws.String(messageTypeDigest),
+		MessageType:      types.MessageType(messageTypeDigest),
 		Signature:        derSig,
-		SigningAlgorithm: aws.String(algo),
+		SigningAlgorithm: types.SigningAlgorithmSpec(algo),
 	}
 
-	verifyOutput, err := cfg.Svc.Verify(verifyInput)
+	verifyOutput, err := cfg.KMSClient.Verify(ctx, verifyInput)
 	if err != nil {
 		return err
 	}
 
-	if !*verifyOutput.SignatureValid {
+	if !verifyOutput.SignatureValid {
 		return jwt.ErrSignatureInvalid
 	}
 
 	return nil
 }
 
-func localVerifyEcdsa(cfg *KmsConfig, hashedSigningString []byte, r *big.Int, s *big.Int) error {
+func localVerifyEcdsa(cfg *Config, hashedSigningString []byte, r *big.Int, s *big.Int) error {
 	var ecdsaPublicKey *ecdsa.PublicKey
-	cachedKey := pubkeyCache.Get(cfg.KmsKeyId)
+
+	cachedKey := pubkeyCache.Get(cfg.KMSKeyID)
 	if cachedKey == nil {
-		getPubKeyOutput, err := cfg.Svc.GetPublicKey(&kms.GetPublicKeyInput{
-			KeyId: aws.String(cfg.KmsKeyId),
+		getPubKeyOutput, err := cfg.KMSClient.GetPublicKey(cfg.Ctx, &kms.GetPublicKeyInput{
+			KeyId: aws.String(cfg.KMSKeyID),
 		})
 		if err != nil {
 			return err
@@ -170,7 +174,7 @@ func localVerifyEcdsa(cfg *KmsConfig, hashedSigningString []byte, r *big.Int, s 
 			return err
 		}
 
-		pubkeyCache.Add(cfg.KmsKeyId, cachedKey)
+		pubkeyCache.Add(cfg.KMSKeyID, cachedKey)
 	}
 
 	ecdsaPublicKey, ok := cachedKey.(*ecdsa.PublicKey)
