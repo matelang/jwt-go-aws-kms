@@ -4,7 +4,7 @@
 // Make sure to use a keyConfig with a keyId that provides the requested SigningMethod's algorithm for Sign/Verify.
 //
 // By default JWT signature verification will happen by downloading and caching the public key of the KMS key,
-// but you can also set VerifyWithKMS to true if you want the KMS to verify the signature instead.
+// but you can also set verifyWithKMS to true if you want the KMS to verify the signature instead.
 //
 package jwtkms
 
@@ -15,24 +15,24 @@ import (
 )
 
 var (
-	SigningMethodKmsEcdsa256 *KmsEcdsaSigningMethod
-	SigningMethodKmsEcdsa384 *KmsEcdsaSigningMethod
-	SigningMethodKmsEcdsa512 *KmsEcdsaSigningMethod
+	SigningMethodKmsECDSA256 *ECDSASigningMethod
+	SigningMethodKmsECDSA384 *ECDSASigningMethod
+	SigningMethodKmsECDSA512 *ECDSASigningMethod
 
-	SigningMethodRs256 *KmsRsaSigningMethod
-	SigningMethodRs384 *KmsRsaSigningMethod
-	SigningMethodRs512 *KmsRsaSigningMethod
+	SigningMethodRS256 *RSASigningMethod
+	SigningMethodRS384 *RSASigningMethod
+	SigningMethodRS512 *RSASigningMethod
 )
 
 var pubkeyCache = newPubKeyCache()
 
 func init() {
-	registerEcdsaSigningMethods()
-	registerRsaSigningMethods()
+	registerECDSASigningMethods()
+	registerRSASigningMethods()
 }
 
-func registerEcdsaSigningMethods() {
-	SigningMethodKmsEcdsa256 = &KmsEcdsaSigningMethod{
+func registerECDSASigningMethods() {
+	SigningMethodKmsECDSA256 = &ECDSASigningMethod{
 		name:                  "ES256",
 		algo:                  "ECDSA_SHA_256",
 		hash:                  crypto.SHA256,
@@ -41,11 +41,11 @@ func registerEcdsaSigningMethods() {
 		fallbackSigningMethod: jwt.SigningMethodES256,
 	}
 
-	jwt.RegisterSigningMethod(SigningMethodKmsEcdsa256.Alg(), func() jwt.SigningMethod {
-		return SigningMethodKmsEcdsa256
+	jwt.RegisterSigningMethod(SigningMethodKmsECDSA256.Alg(), func() jwt.SigningMethod {
+		return SigningMethodKmsECDSA256
 	})
 
-	SigningMethodKmsEcdsa384 = &KmsEcdsaSigningMethod{
+	SigningMethodKmsECDSA384 = &ECDSASigningMethod{
 		name:                  "ES384",
 		algo:                  "ECDSA_SHA_384",
 		hash:                  crypto.SHA384,
@@ -55,10 +55,10 @@ func registerEcdsaSigningMethods() {
 	}
 
 	jwt.RegisterSigningMethod(jwt.SigningMethodES384.Alg(), func() jwt.SigningMethod {
-		return SigningMethodKmsEcdsa384
+		return SigningMethodKmsECDSA384
 	})
 
-	SigningMethodKmsEcdsa512 = &KmsEcdsaSigningMethod{
+	SigningMethodKmsECDSA512 = &ECDSASigningMethod{
 		name:                  "ES512",
 		algo:                  "ECDSA_SHA_512",
 		hash:                  crypto.SHA512,
@@ -68,41 +68,41 @@ func registerEcdsaSigningMethods() {
 	}
 
 	jwt.RegisterSigningMethod(jwt.SigningMethodES512.Alg(), func() jwt.SigningMethod {
-		return SigningMethodKmsEcdsa512
+		return SigningMethodKmsECDSA512
 	})
 }
 
-func registerRsaSigningMethods() {
-	SigningMethodRs256 = &KmsRsaSigningMethod{
+func registerRSASigningMethods() {
+	SigningMethodRS256 = &RSASigningMethod{
 		name:                  "RS256",
 		algo:                  "RSASSA_PKCS1_V1_5_SHA_256",
 		hash:                  crypto.SHA256,
 		fallbackSigningMethod: jwt.SigningMethodRS256,
 	}
 
-	jwt.RegisterSigningMethod(SigningMethodRs256.Alg(), func() jwt.SigningMethod {
-		return SigningMethodRs256
+	jwt.RegisterSigningMethod(SigningMethodRS256.Alg(), func() jwt.SigningMethod {
+		return SigningMethodRS256
 	})
 
-	SigningMethodRs384 = &KmsRsaSigningMethod{
+	SigningMethodRS384 = &RSASigningMethod{
 		name:                  "RS384",
 		algo:                  "RSASSA_PKCS1_V1_5_SHA_384",
 		hash:                  crypto.SHA384,
 		fallbackSigningMethod: jwt.SigningMethodRS384,
 	}
 
-	jwt.RegisterSigningMethod(SigningMethodRs384.Alg(), func() jwt.SigningMethod {
-		return SigningMethodRs384
+	jwt.RegisterSigningMethod(SigningMethodRS384.Alg(), func() jwt.SigningMethod {
+		return SigningMethodRS384
 	})
 
-	SigningMethodRs512 = &KmsRsaSigningMethod{
+	SigningMethodRS512 = &RSASigningMethod{
 		name:                  "RS512",
 		algo:                  "RSASSA_PKCS1_V1_5_SHA_512",
 		hash:                  crypto.SHA512,
 		fallbackSigningMethod: jwt.SigningMethodRS512,
 	}
 
-	jwt.RegisterSigningMethod(SigningMethodRs512.Alg(), func() jwt.SigningMethod {
-		return SigningMethodRs512
+	jwt.RegisterSigningMethod(SigningMethodRS512.Alg(), func() jwt.SigningMethod {
+		return SigningMethodRS512
 	})
 }

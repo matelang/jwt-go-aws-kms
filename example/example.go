@@ -20,13 +20,8 @@ func main() {
 		panic(err)
 	}
 
-	kmsConfig := &jwtkms.Config{
-		KMSClient: kms.NewFromConfig(awsCfg),
-		KMSKeyID:  keyID,
-	}
-
 	now := time.Now()
-	jwtToken := jwt.NewWithClaims(jwtkms.SigningMethodKmsEcdsa256, &jwt.StandardClaims{
+	jwtToken := jwt.NewWithClaims(jwtkms.SigningMethodKmsECDSA256, &jwt.StandardClaims{
 		Audience:  "api.example.com",
 		ExpiresAt: now.Add(1 * time.Hour * 24).Unix(),
 		Id:        "1234-5678",
@@ -36,11 +31,13 @@ func main() {
 		Subject:   "john.doe@example.com",
 	})
 
-	str, err := jwtToken.SignedString(kmsConfig)
+	kmsConfig := jwtkms.NewKMSConfig(kms.NewFromConfig(awsCfg), keyID, false)
 
+	str, err := jwtToken.SignedString(kmsConfig.WithContext(context.Background()))
 	if err != nil {
 		log.Fatalf("can not sign JWT %s", err)
 	}
+
 	log.Printf("Signed JWT %s\n", str)
 
 	claims := jwt.StandardClaims{}
