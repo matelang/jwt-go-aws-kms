@@ -2,7 +2,6 @@ package jwtkms
 
 import (
 	"context"
-
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 )
 
@@ -36,9 +35,11 @@ func NewKMSConfig(client *kms.Client, keyID string, verify bool) *Config {
 	}
 }
 
-// WithContext adds a context to Config.
+// WithContext returns a copy of Config with context.
 func (c *Config) WithContext(ctx context.Context) *Config {
-	c.ctx = ctx
+	c2 := new(Config)
+	*c2 = *c
+	c2.ctx = ctx
 
-	return c
+	return c2
 }
