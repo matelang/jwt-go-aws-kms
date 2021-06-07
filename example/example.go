@@ -14,7 +14,7 @@ import (
 const keyID = "aa2f90bf-f09f-42b7-b4f3-2083bd00f9ad"
 
 func main() {
-	awsCfg, err := config.LoadDefaultConfig(context.TODO(),
+	awsCfg, err := config.LoadDefaultConfig(context.Background(),
 		config.WithRegion("eu-central-1"))
 	if err != nil {
 		panic(err)
