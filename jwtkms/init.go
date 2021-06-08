@@ -15,9 +15,9 @@ import (
 )
 
 var (
-	SigningMethodKmsECDSA256 *ECDSASigningMethod
-	SigningMethodKmsECDSA384 *ECDSASigningMethod
-	SigningMethodKmsECDSA512 *ECDSASigningMethod
+	SigningMethodECDSA256 *ECDSASigningMethod
+	SigningMethodECDSA384 *ECDSASigningMethod
+	SigningMethodECDSA512 *ECDSASigningMethod
 
 	SigningMethodRS256 *RSASigningMethod
 	SigningMethodRS384 *RSASigningMethod
@@ -32,7 +32,7 @@ func init() {
 }
 
 func registerECDSASigningMethods() {
-	SigningMethodKmsECDSA256 = &ECDSASigningMethod{
+	SigningMethodECDSA256 = &ECDSASigningMethod{
 		name:                  "ES256",
 		algo:                  "ECDSA_SHA_256",
 		hash:                  crypto.SHA256,
@@ -41,11 +41,11 @@ func registerECDSASigningMethods() {
 		fallbackSigningMethod: jwt.SigningMethodES256,
 	}
 
-	jwt.RegisterSigningMethod(SigningMethodKmsECDSA256.Alg(), func() jwt.SigningMethod {
-		return SigningMethodKmsECDSA256
+	jwt.RegisterSigningMethod(SigningMethodECDSA256.Alg(), func() jwt.SigningMethod {
+		return SigningMethodECDSA256
 	})
 
-	SigningMethodKmsECDSA384 = &ECDSASigningMethod{
+	SigningMethodECDSA384 = &ECDSASigningMethod{
 		name:                  "ES384",
 		algo:                  "ECDSA_SHA_384",
 		hash:                  crypto.SHA384,
@@ -55,10 +55,10 @@ func registerECDSASigningMethods() {
 	}
 
 	jwt.RegisterSigningMethod(jwt.SigningMethodES384.Alg(), func() jwt.SigningMethod {
-		return SigningMethodKmsECDSA384
+		return SigningMethodECDSA384
 	})
 
-	SigningMethodKmsECDSA512 = &ECDSASigningMethod{
+	SigningMethodECDSA512 = &ECDSASigningMethod{
 		name:                  "ES512",
 		algo:                  "ECDSA_SHA_512",
 		hash:                  crypto.SHA512,
@@ -68,7 +68,7 @@ func registerECDSASigningMethods() {
 	}
 
 	jwt.RegisterSigningMethod(jwt.SigningMethodES512.Alg(), func() jwt.SigningMethod {
-		return SigningMethodKmsECDSA512
+		return SigningMethodECDSA512
 	})
 }
 

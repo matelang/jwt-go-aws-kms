@@ -21,7 +21,7 @@ func main() {
 	}
 
 	now := time.Now()
-	jwtToken := jwt.NewWithClaims(jwtkms.SigningMethodKmsECDSA256, &jwt.StandardClaims{
+	jwtToken := jwt.NewWithClaims(jwtkms.SigningMethodECDSA256, &jwt.StandardClaims{
 		Audience:  "api.example.com",
 		ExpiresAt: now.Add(1 * time.Hour * 24).Unix(),
 		Id:        "1234-5678",
