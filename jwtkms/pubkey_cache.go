@@ -16,14 +16,16 @@ func newPubKeyCache() *pubKeyCache {
 	}
 }
 
-func (c *pubKeyCache) Add(keyId string, key crypto.PublicKey) {
+func (c *pubKeyCache) Add(keyID string, key crypto.PublicKey) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	c.pubKeys[keyId] = key
+
+	c.pubKeys[keyID] = key
 }
 
-func (c *pubKeyCache) Get(keyId string) crypto.PublicKey {
+func (c *pubKeyCache) Get(keyID string) crypto.PublicKey {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-	return c.pubKeys[keyId]
+
+	return c.pubKeys[keyID]
 }
