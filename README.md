@@ -1,6 +1,6 @@
 # AWS KMS adapter for dgrijalva/jwt-go library
 This library provides an AWS KMS(Key Management Service) adapter to be used with the popular GoLang JWT library
-[dgrijalva/jwt-go](https://github.com/dgrijalva/jwt-go).
+[golang-jwt/jwt-go](https://github.com/golang-jwt/jwt).
 
 It will *Sign* a JWT token using an assymetric key stored in AWS KMS.
 
@@ -27,6 +27,10 @@ Shouting out to:
 * [dgrijalva](https://github.com/dgrijalva)
 
   for the easy to extend GoLang JWT Library
+
+* [golang-jwt](https://github.com/golang-jwt)
+
+  for taking over the project from dgrijalva
 
 * [Mikael Gidmark](https://stackoverflow.com/users/300598/mikael-gidmark)
 
