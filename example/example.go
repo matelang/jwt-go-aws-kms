@@ -7,7 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/matelang/jwt-go-aws-kms/v2/jwtkms"
 )
 
@@ -40,7 +40,7 @@ func main() {
 
 	log.Printf("Signed JWT %s\n", str)
 
-	claims := jwt.StandardClaims{}
+	claims := jwt.RegisteredClaims{}
 
 	_, err = jwt.ParseWithClaims(str, &claims, func(token *jwt.Token) (interface{}, error) {
 		return kmsConfig, nil
