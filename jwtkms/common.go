@@ -2,10 +2,21 @@ package jwtkms
 
 import (
 	"context"
+
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 )
 
 const messageTypeDigest = "DIGEST"
+
+// KMSClient is the subset of `*kms.Client` functionality used when signing and
+// verifying JWTs. It is an interface here so users do not need to depend on
+// the full-sized `*kms.Client` object and can substitute their own
+// implmentation.
+type KMSClient interface {
+	Sign(ctx context.Context, in *kms.SignInput, optFns ...func(*kms.Options)) (*kms.SignOutput, error)
+	Verify(ctx context.Context, in *kms.VerifyInput, optFns ...func(*kms.Options)) (*kms.VerifyOutput, error)
+	GetPublicKey(ctx context.Context, in *kms.GetPublicKeyInput, optFns ...func(*kms.Options)) (*kms.GetPublicKeyOutput, error)
+}
 
 // Config is a struct to be passed to token signing/verification.
 type Config struct {
@@ -13,7 +24,7 @@ type Config struct {
 	ctx context.Context
 
 	// A configured kms client pointer to AWS KMS
-	kmsClient *kms.Client
+	kmsClient KMSClient
 
 	// AWS KMS Key ID to be used
 	kmsKeyID string
@@ -26,7 +37,7 @@ type Config struct {
 }
 
 // NewKMSConfig create a new Config with specified parameters.
-func NewKMSConfig(client *kms.Client, keyID string, verify bool) *Config {
+func NewKMSConfig(client KMSClient, keyID string, verify bool) *Config {
 	return &Config{
 		ctx:           context.Background(),
 		kmsClient:     client,
