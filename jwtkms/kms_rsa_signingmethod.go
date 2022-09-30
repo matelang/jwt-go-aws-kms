@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"errors"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
@@ -37,7 +38,7 @@ func (m *RSASigningMethod) Verify(signingString, signature string, keyConfig int
 
 	sig, err := jwt.DecodeSegment(signature)
 	if err != nil {
-		return err
+		return fmt.Errorf("decoding signature: %w", err)
 	}
 
 	if !m.hash.Available() {
@@ -83,7 +84,7 @@ func (m *RSASigningMethod) Sign(signingString string, keyConfig interface{}) (st
 
 	signOutput, err := cfg.kmsClient.Sign(cfg.ctx, signInput)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("signing digest: %w", err)
 	}
 
 	return jwt.EncodeSegment(signOutput.Signature), nil
@@ -100,7 +101,7 @@ func verifyRSA(cfg *Config, algo string, hashedSigningString []byte, sig []byte)
 
 	verifyOutput, err := cfg.kmsClient.Verify(cfg.ctx, verifyInput)
 	if err != nil {
-		return err
+		return fmt.Errorf("verifying signature remotely: %w", err)
 	}
 
 	if !verifyOutput.SignatureValid {
@@ -119,12 +120,12 @@ func localVerifyRSA(cfg *Config, hash crypto.Hash, hashedSigningString []byte, s
 			KeyId: aws.String(cfg.kmsKeyID),
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("getting public key: %w", err)
 		}
 
 		cachedKey, err = x509.ParsePKIXPublicKey(getPubKeyOutput.PublicKey)
 		if err != nil {
-			return err
+			return fmt.Errorf("parsing public key: %w", err)
 		}
 
 		pubkeyCache.Add(cfg.kmsKeyID, cachedKey)
@@ -135,5 +136,9 @@ func localVerifyRSA(cfg *Config, hash crypto.Hash, hashedSigningString []byte, s
 		return errors.New("invalid key type for key")
 	}
 
-	return rsa.VerifyPKCS1v15(rsaPublicKey, hash, hashedSigningString, sig)
+	if err := rsa.VerifyPKCS1v15(rsaPublicKey, hash, hashedSigningString, sig); err != nil {
+		return fmt.Errorf("verifying signature locally: %w", err)
+	}
+
+	return nil
 }
