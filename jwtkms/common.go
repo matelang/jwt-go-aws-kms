@@ -6,8 +6,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 )
 
-const messageTypeDigest = "DIGEST"
-
 // KMSClient is the subset of `*kms.Client` functionality used when signing and
 // verifying JWTs. It is an interface here so users do not need to depend on
 // the full-sized `*kms.Client` object and can substitute their own
