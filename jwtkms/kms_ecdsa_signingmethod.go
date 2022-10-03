@@ -84,7 +84,7 @@ func (m *ECDSASigningMethod) Sign(signingString string, keyConfig interface{}) (
 	signInput := &kms.SignInput{
 		KeyId:            aws.String(cfg.kmsKeyID),
 		Message:          hashedSigningString,
-		MessageType:      types.MessageType(messageTypeDigest),
+		MessageType:      types.MessageTypeDigest,
 		SigningAlgorithm: types.SigningAlgorithmSpec(m.algo),
 	}
 
@@ -139,7 +139,7 @@ func verifyECDSA(cfg *Config, algo string, hashedSigningString []byte, r *big.In
 	verifyInput := &kms.VerifyInput{
 		KeyId:            aws.String(cfg.kmsKeyID),
 		Message:          hashedSigningString,
-		MessageType:      types.MessageType(messageTypeDigest),
+		MessageType:      types.MessageTypeDigest,
 		Signature:        derSig,
 		SigningAlgorithm: types.SigningAlgorithmSpec(algo),
 	}
