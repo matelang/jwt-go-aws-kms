@@ -77,7 +77,7 @@ func (m *RSASigningMethod) Sign(signingString string, keyConfig interface{}) (st
 	signInput := &kms.SignInput{
 		KeyId:            aws.String(cfg.kmsKeyID),
 		Message:          hashedSigningString,
-		MessageType:      types.MessageType(messageTypeDigest),
+		MessageType:      types.MessageTypeDigest,
 		SigningAlgorithm: types.SigningAlgorithmSpec(m.algo),
 	}
 
@@ -94,7 +94,7 @@ func verifyRSA(cfg *Config, algo string, hashedSigningString []byte, sig []byte)
 		KeyId:            aws.String(cfg.kmsKeyID),
 		Message:          hashedSigningString,
 		Signature:        sig,
-		MessageType:      types.MessageType(messageTypeDigest),
+		MessageType:      types.MessageTypeDigest,
 		SigningAlgorithm: types.SigningAlgorithmSpec(algo),
 	}
 
