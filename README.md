@@ -44,3 +44,7 @@ Shouting out to:
 * [karalabe](https://github.com/karalabe)
 
   for reviewing my code
+  
+* [gkelly](https://github.com/gkelly)
+
+  for various contributions especially around the library's unit testability
