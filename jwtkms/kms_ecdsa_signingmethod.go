@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/asn1"
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -41,7 +42,7 @@ func (m *ECDSASigningMethod) Verify(signingString, signature string, keyConfig i
 
 	sig, err := jwt.DecodeSegment(signature)
 	if err != nil {
-		return err
+		return fmt.Errorf("decoding signature: %w", err)
 	}
 
 	if !m.hash.Available() {
@@ -90,7 +91,7 @@ func (m *ECDSASigningMethod) Sign(signingString string, keyConfig interface{}) (
 
 	signOutput, err := cfg.kmsClient.Sign(cfg.ctx, signInput)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("signing digest: %w", err)
 	}
 
 	p := struct {
@@ -100,7 +101,7 @@ func (m *ECDSASigningMethod) Sign(signingString string, keyConfig interface{}) (
 
 	_, err = asn1.Unmarshal(signOutput.Signature, &p)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("unmarshalling signature: %w", err)
 	}
 
 	curveBits := m.curveBits
@@ -133,7 +134,7 @@ func verifyECDSA(cfg *Config, algo string, hashedSigningString []byte, r *big.In
 
 	derSig, err := asn1.Marshal(p)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshalling signature: %w", err)
 	}
 
 	verifyInput := &kms.VerifyInput{
@@ -146,7 +147,7 @@ func verifyECDSA(cfg *Config, algo string, hashedSigningString []byte, r *big.In
 
 	verifyOutput, err := cfg.kmsClient.Verify(cfg.ctx, verifyInput)
 	if err != nil {
-		return err
+		return fmt.Errorf("verifying signature remotely: %w", err)
 	}
 
 	if !verifyOutput.SignatureValid {
@@ -165,12 +166,12 @@ func localVerifyECDSA(cfg *Config, hashedSigningString []byte, r *big.Int, s *bi
 			KeyId: aws.String(cfg.kmsKeyID),
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("getting public key: %w", err)
 		}
 
 		cachedKey, err = x509.ParsePKIXPublicKey(getPubKeyOutput.PublicKey)
 		if err != nil {
-			return err
+			return fmt.Errorf("parsing public key: %w", err)
 		}
 
 		pubkeyCache.Add(cfg.kmsKeyID, cachedKey)
