@@ -9,21 +9,14 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
-	"github.com/aws/aws-sdk-go-v2/service/kms/types"
 	"github.com/golang-jwt/jwt/v4"
 )
 
 // RSASigningMethod is an RSA implementation of the SigningMethod interface that uses KMS to Sign/Verify JWTs.
 // PS uses the same key as RSA but differ in the algo
 type PSSSigningMethod struct {
-	name                  string
-	algo                  string
-	hash                  crypto.Hash
+	RSASigningMethod
 	fallbackSigningMethod *jwt.SigningMethodRSAPSS
-}
-
-func (m *PSSSigningMethod) Alg() string {
-	return m.name
 }
 
 func (m *PSSSigningMethod) Verify(signingString, signature string, keyConfig interface{}) error {
@@ -55,40 +48,6 @@ func (m *PSSSigningMethod) Verify(signingString, signature string, keyConfig int
 	}
 
 	return localVerifyPSS(cfg, m.hash, hashedSigningString, sig)
-}
-
-func (m *PSSSigningMethod) Sign(signingString string, keyConfig interface{}) (string, error) {
-	cfg, ok := keyConfig.(*Config)
-	if !ok {
-		_, isBuiltInRsa := keyConfig.(*rsa.PublicKey)
-		if isBuiltInRsa {
-			return m.fallbackSigningMethod.Sign(signingString, keyConfig)
-		}
-
-		return "", jwt.ErrInvalidKeyType
-	}
-
-	if !m.hash.Available() {
-		return "", jwt.ErrHashUnavailable
-	}
-
-	hasher := m.hash.New()
-	hasher.Write([]byte(signingString)) //nolint:errcheck
-	hashedSigningString := hasher.Sum(nil)
-
-	signInput := &kms.SignInput{
-		KeyId:            aws.String(cfg.kmsKeyID),
-		Message:          hashedSigningString,
-		MessageType:      types.MessageTypeDigest,
-		SigningAlgorithm: types.SigningAlgorithmSpec(m.algo),
-	}
-
-	signOutput, err := cfg.kmsClient.Sign(cfg.ctx, signInput)
-	if err != nil {
-		return "", fmt.Errorf("signing digest: %w", err)
-	}
-
-	return jwt.EncodeSegment(signOutput.Signature), nil
 }
 
 func localVerifyPSS(cfg *Config, hash crypto.Hash, hashedSigningString []byte, sig []byte) error {
