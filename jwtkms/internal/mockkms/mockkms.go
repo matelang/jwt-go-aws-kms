@@ -217,11 +217,21 @@ func (k *MockKMS) Verify(ctx context.Context, in *kms.VerifyInput, optFns ...fun
 		}, nil
 
 	case *rsa.PrivateKey:
-		return verifyRSA(key, in)
+		return verifyRSAorPSS(key, in)
 
 	default:
 		panic("unreachable")
 	}
+}
+
+func verifyRSAorPSS(key *rsa.PrivateKey, in *kms.VerifyInput) (*kms.VerifyOutput, error) {
+	// test if the algorithm is PSS, else use rss
+	_, ok := pssHashAlgorithms[in.SigningAlgorithm]
+	if ok {
+		return verifyPSS(key, in)
+	}
+
+	return verifyRSA(key, in)
 }
 
 func verifyRSA(key *rsa.PrivateKey, in *kms.VerifyInput) (*kms.VerifyOutput, error) {
@@ -231,6 +241,19 @@ func verifyRSA(key *rsa.PrivateKey, in *kms.VerifyInput) (*kms.VerifyOutput, err
 	}
 
 	err := rsa.VerifyPKCS1v15(&key.PublicKey, hash, in.Message, in.Signature)
+
+	return &kms.VerifyOutput{
+		SignatureValid: err == nil,
+	}, nil
+}
+
+func verifyPSS(key *rsa.PrivateKey, in *kms.VerifyInput) (*kms.VerifyOutput, error) {
+	hash, ok := pssHashAlgorithms[in.SigningAlgorithm]
+	if !ok {
+		return nil, fmt.Errorf("unknown signing algorithm: %v", in.SigningAlgorithm)
+	}
+
+	err := rsa.VerifyPSS(&key.PublicKey, hash, in.Message, in.Signature, &rsa.PSSOptions{})
 
 	return &kms.VerifyOutput{
 		SignatureValid: err == nil,

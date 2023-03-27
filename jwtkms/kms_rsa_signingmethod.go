@@ -50,7 +50,7 @@ func (m *RSASigningMethod) Verify(signingString, signature string, keyConfig int
 	hashedSigningString := hasher.Sum(nil)
 
 	if cfg.verifyWithKMS {
-		return verifyRSA(cfg, m.algo, hashedSigningString, sig)
+		return verifyRSAOrPSS(cfg, m.algo, hashedSigningString, sig)
 	}
 
 	return localVerifyRSA(cfg, m.hash, hashedSigningString, sig)
@@ -90,7 +90,7 @@ func (m *RSASigningMethod) Sign(signingString string, keyConfig interface{}) (st
 	return jwt.EncodeSegment(signOutput.Signature), nil
 }
 
-func verifyRSA(cfg *Config, algo string, hashedSigningString []byte, sig []byte) error {
+func verifyRSAOrPSS(cfg *Config, algo string, hashedSigningString []byte, sig []byte) error {
 	verifyInput := &kms.VerifyInput{
 		KeyId:            aws.String(cfg.kmsKeyID),
 		Message:          hashedSigningString,

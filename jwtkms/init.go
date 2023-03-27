@@ -113,12 +113,10 @@ func registerRSASigningMethods() {
 
 func registerPSSSigningMethods() {
 	SigningMethodPS256 = &PSSSigningMethod{
-		RSASigningMethod{
-			name: "PS256",
-			algo: "RSASSA_PSS_SHA_256",
-			hash: crypto.SHA256,
-		},
-		jwt.SigningMethodPS256,
+		name:                  "PS256",
+		algo:                  "RSASSA_PSS_SHA_256",
+		hash:                  crypto.SHA256,
+		fallbackSigningMethod: jwt.SigningMethodPS256,
 	}
 
 	jwt.RegisterSigningMethod(SigningMethodPS256.Alg(), func() jwt.SigningMethod {
@@ -126,12 +124,10 @@ func registerPSSSigningMethods() {
 	})
 
 	SigningMethodPS384 = &PSSSigningMethod{
-		RSASigningMethod{
-			name: "PS384",
-			algo: "RSASSA_PSS_SHA_384",
-			hash: crypto.SHA384,
-		},
-		jwt.SigningMethodPS384,
+		name:                  "PS384",
+		algo:                  "RSASSA_PSS_SHA_384",
+		hash:                  crypto.SHA384,
+		fallbackSigningMethod: jwt.SigningMethodPS384,
 	}
 
 	jwt.RegisterSigningMethod(SigningMethodPS384.Alg(), func() jwt.SigningMethod {
@@ -139,12 +135,10 @@ func registerPSSSigningMethods() {
 	})
 
 	SigningMethodPS512 = &PSSSigningMethod{
-		RSASigningMethod{
-			name: "PS512",
-			algo: "RSASSA_PSS_SHA_384",
-			hash: crypto.SHA512,
-		},
-		jwt.SigningMethodPS512,
+		name:                  "PS512",
+		algo:                  "RSASSA_PSS_SHA_512",
+		hash:                  crypto.SHA512,
+		fallbackSigningMethod: jwt.SigningMethodPS512,
 	}
 
 	jwt.RegisterSigningMethod(SigningMethodPS512.Alg(), func() jwt.SigningMethod {
