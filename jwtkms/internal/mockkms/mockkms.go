@@ -121,7 +121,7 @@ func (k *MockKMS) Sign(_ context.Context, in *kms.SignInput, _ ...func(*kms.Opti
 		return signECSDA(key, in)
 
 	case *rsa.PrivateKey:
-		return signRSA(key, in)
+		return signRSAorPSS(key, in)
 
 	default:
 		panic("unreachable")
@@ -155,13 +155,46 @@ var rsaHashAlgorithms = map[types.SigningAlgorithmSpec]crypto.Hash{
 	types.SigningAlgorithmSpecRsassaPkcs1V15Sha512: crypto.SHA512,
 }
 
+var pssHashAlgorithms = map[types.SigningAlgorithmSpec]crypto.Hash{
+	types.SigningAlgorithmSpecRsassaPssSha256: crypto.SHA256,
+	types.SigningAlgorithmSpecRsassaPssSha384: crypto.SHA384,
+	types.SigningAlgorithmSpecRsassaPssSha512: crypto.SHA512,
+}
+
+func signRSAorPSS(key *rsa.PrivateKey, in *kms.SignInput) (*kms.SignOutput, error) {
+	// test if the algorithm is PSS, else use rss
+	_, ok := pssHashAlgorithms[in.SigningAlgorithm]
+	if ok {
+		return signPSS(key, in)
+	}
+
+	return signRSA(key, in)
+}
+
 func signRSA(key *rsa.PrivateKey, in *kms.SignInput) (*kms.SignOutput, error) {
 	hash, ok := rsaHashAlgorithms[in.SigningAlgorithm]
 	if !ok {
 		return nil, fmt.Errorf("unknown signing algorithm: %v", in.SigningAlgorithm)
 	}
 
+	// PS 512 expect message to be hashed
 	sig, err := rsa.SignPKCS1v15(rand.Reader, key, hash, in.Message)
+	if err != nil {
+		return nil, fmt.Errorf("signing message: %w", err)
+	}
+
+	return &kms.SignOutput{
+		Signature: sig,
+	}, nil
+}
+
+func signPSS(key *rsa.PrivateKey, in *kms.SignInput) (*kms.SignOutput, error) {
+	hash, ok := pssHashAlgorithms[in.SigningAlgorithm]
+	if !ok {
+		return nil, fmt.Errorf("unknown signing algorithm: %v", in.SigningAlgorithm)
+	}
+
+	sig, err := rsa.SignPSS(rand.Reader, key, hash, in.Message, &rsa.PSSOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("signing message: %w", err)
 	}

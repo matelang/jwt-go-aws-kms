@@ -5,7 +5,6 @@
 //
 // By default JWT signature verification will happen by downloading and caching the public key of the KMS key,
 // but you can also set verifyWithKMS to true if you want the KMS to verify the signature instead.
-//
 package jwtkms
 
 import (
@@ -22,6 +21,10 @@ var (
 	SigningMethodRS256 *RSASigningMethod
 	SigningMethodRS384 *RSASigningMethod
 	SigningMethodRS512 *RSASigningMethod
+
+	SigningMethodPS256 *PSSSigningMethod
+	SigningMethodPS384 *PSSSigningMethod
+	SigningMethodPS512 *PSSSigningMethod
 )
 
 var pubkeyCache = newPubKeyCache()
@@ -29,6 +32,7 @@ var pubkeyCache = newPubKeyCache()
 func init() {
 	registerECDSASigningMethods()
 	registerRSASigningMethods()
+	registerPSSSigningMethods()
 }
 
 func registerECDSASigningMethods() {
@@ -104,5 +108,46 @@ func registerRSASigningMethods() {
 
 	jwt.RegisterSigningMethod(SigningMethodRS512.Alg(), func() jwt.SigningMethod {
 		return SigningMethodRS512
+	})
+}
+
+func registerPSSSigningMethods() {
+	SigningMethodPS256 = &PSSSigningMethod{
+		RSASigningMethod{
+			name: "PS256",
+			algo: "RSASSA_PSS_SHA_256",
+			hash: crypto.SHA256,
+		},
+		jwt.SigningMethodPS256,
+	}
+
+	jwt.RegisterSigningMethod(SigningMethodPS256.Alg(), func() jwt.SigningMethod {
+		return SigningMethodPS256
+	})
+
+	SigningMethodPS384 = &PSSSigningMethod{
+		RSASigningMethod{
+			name: "PS384",
+			algo: "RSASSA_PSS_SHA_384",
+			hash: crypto.SHA384,
+		},
+		jwt.SigningMethodPS384,
+	}
+
+	jwt.RegisterSigningMethod(SigningMethodPS384.Alg(), func() jwt.SigningMethod {
+		return SigningMethodPS384
+	})
+
+	SigningMethodPS512 = &PSSSigningMethod{
+		RSASigningMethod{
+			name: "PS512",
+			algo: "RSASSA_PSS_SHA_384",
+			hash: crypto.SHA512,
+		},
+		jwt.SigningMethodPS512,
+	}
+
+	jwt.RegisterSigningMethod(SigningMethodPS512.Alg(), func() jwt.SigningMethod {
+		return SigningMethodPS512
 	})
 }
