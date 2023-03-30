@@ -7,7 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/matelang/jwt-go-aws-kms/v2/jwtkms"
 )
 
@@ -21,13 +21,13 @@ func main() {
 	}
 
 	now := time.Now()
-	jwtToken := jwt.NewWithClaims(jwtkms.SigningMethodECDSA256, &jwt.StandardClaims{
-		Audience:  "api.example.com",
-		ExpiresAt: now.Add(1 * time.Hour * 24).Unix(),
-		Id:        "1234-5678",
-		IssuedAt:  now.Unix(),
+	jwtToken := jwt.NewWithClaims(jwtkms.SigningMethodECDSA256, &jwt.RegisteredClaims{
+		Audience:  jwt.ClaimStrings{"api.example.com"},
+		ExpiresAt: jwt.NewNumericDate(now.Add(1 * time.Hour * 24)),
+		ID:        "1234-5678",
+		IssuedAt:  jwt.NewNumericDate(now),
 		Issuer:    "sso.example.com",
-		NotBefore: now.Unix(),
+		NotBefore: jwt.NewNumericDate(now),
 		Subject:   "john.doe@example.com",
 	})
 

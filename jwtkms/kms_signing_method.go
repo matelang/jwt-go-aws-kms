@@ -6,11 +6,12 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/asn1"
+	"math/big"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/kms/types"
-	"github.com/golang-jwt/jwt/v4"
-	"math/big"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type fallbackSigningMethodCompatibilityCheckerFunc func(keyConfig interface{}) bool
@@ -94,7 +95,7 @@ func (m *KMSSigningMethod) Alg() string {
 	return m.fallbackSigningMethod.Alg()
 }
 
-func (m *KMSSigningMethod) Verify(signingString string, signature string, keyConfig interface{}) error {
+func (m *KMSSigningMethod) Verify(signingString string, sig []byte, keyConfig interface{}) (err error) {
 	// Expecting a jwtkms.Config as the keyConfig to use AWS KMS to Verify tokens.
 	cfg, ok := keyConfig.(*Config)
 
@@ -104,15 +105,10 @@ func (m *KMSSigningMethod) Verify(signingString string, signature string, keyCon
 		keyConfigIsForFallbackSigningMethod := m.fallbackSigningMethodKeyConfigCheckerFunc(keyConfig)
 
 		if keyConfigIsForFallbackSigningMethod {
-			return m.fallbackSigningMethod.Verify(signingString, signature, keyConfig)
+			return m.fallbackSigningMethod.Verify(signingString, sig, keyConfig)
 		}
 
 		return jwt.ErrInvalidKeyType
-	}
-
-	sig, err := jwt.DecodeSegment(signature)
-	if err != nil {
-		return err
 	}
 
 	if !m.hash.Available() {
@@ -169,10 +165,10 @@ func (m *KMSSigningMethod) Verify(signingString string, signature string, keyCon
 		pubkeyCache.Add(cfg.kmsKeyID, cachedKey)
 	}
 
-	return m.fallbackSigningMethod.Verify(signingString, signature, cachedKey)
+	return m.fallbackSigningMethod.Verify(signingString, sig, cachedKey)
 }
 
-func (m *KMSSigningMethod) Sign(signingString string, keyConfig interface{}) (string, error) {
+func (m *KMSSigningMethod) Sign(signingString string, keyConfig interface{}) ([]byte, error) {
 	// Expecting a jwtkms.Config as the keyConfig to use AWS KMS to Sign tokens.
 	cfg, ok := keyConfig.(*Config)
 
@@ -185,11 +181,11 @@ func (m *KMSSigningMethod) Sign(signingString string, keyConfig interface{}) (st
 			return m.fallbackSigningMethod.Sign(signingString, keyConfig)
 		}
 
-		return "", jwt.ErrInvalidKeyType
+		return nil, jwt.ErrInvalidKeyType
 	}
 
 	if !m.hash.Available() {
-		return "", jwt.ErrHashUnavailable
+		return nil, jwt.ErrHashUnavailable
 	}
 
 	hasher := m.hash.New()
@@ -205,16 +201,16 @@ func (m *KMSSigningMethod) Sign(signingString string, keyConfig interface{}) (st
 
 	signOutput, err := cfg.kmsClient.Sign(cfg.ctx, signInput)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	formattedSig := signOutput.Signature
 	if m.postSignatureSigFormatterFunc != nil {
 		formattedSig, err = m.postSignatureSigFormatterFunc(signOutput.Signature)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 	}
 
-	return jwt.EncodeSegment(formattedSig), nil
+	return formattedSig, nil
 }
