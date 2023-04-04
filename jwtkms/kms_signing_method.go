@@ -2,22 +2,27 @@ package jwtkms
 
 import (
 	"crypto"
-	"crypto/ecdsa"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/kms/types"
 	"github.com/golang-jwt/jwt/v4"
 )
 
+type fallbackSigningMethodCompatibilityCheckerFunc func(keyConfig interface{}) bool
+type sigFormatterFunc func(sig []byte) ([]byte, error)
+
 // KMSSigningMethod is a ...
 type KMSSigningMethod struct {
-	algo                                      types.SigningAlgorithmSpec
-	hash                                      crypto.Hash
+	algo types.SigningAlgorithmSpec
+	hash crypto.Hash
+
 	fallbackSigningMethod                     jwt.SigningMethod
-	fallbackSigningMethodKeyConfigCheckerFunc func(interface{}) bool
-	verificationSigFormatterFunc              func(sig []byte) ([]byte, error)
-	signatureSigFormatterFunc                 func(sig []byte) ([]byte, error)
-	localVerificationFunc                     func(cfg *Config, hashedSigningString []byte, sig []byte) error
+	fallbackSigningMethodKeyConfigCheckerFunc fallbackSigningMethodCompatibilityCheckerFunc
+
+	preVerificationSigFormatterFunc sigFormatterFunc
+	postSignatureSigFormatterFunc   sigFormatterFunc
+
+	localVerificationFunc func(cfg *Config, hashedSigningString []byte, sig []byte) error
 }
 
 func (m *KMSSigningMethod) Alg() string {
@@ -25,11 +30,15 @@ func (m *KMSSigningMethod) Alg() string {
 }
 
 func (m *KMSSigningMethod) Verify(signingString, signature string, keyConfig interface{}) error {
+	// Expecting a jwtkms.Config as the keyConfig to use AWS KMS to Verify tokens.
 	cfg, ok := keyConfig.(*Config)
-	if !ok {
-		isBuiltInSigningMethod := m.fallbackSigningMethodKeyConfigCheckerFunc(keyConfig)
 
-		if isBuiltInSigningMethod {
+	// To keep compatibility with the golang-jwt library and since we've hijacked the flow on the signing method,
+	// we check whether the keyConfig is for the expected underlying jwt.SigningMethod and proxy the call accordingly.
+	if !ok {
+		keyConfigIsForFallbackSigningMethod := m.fallbackSigningMethodKeyConfigCheckerFunc(keyConfig)
+
+		if keyConfigIsForFallbackSigningMethod {
 			return m.fallbackSigningMethod.Verify(signingString, signature, keyConfig)
 		}
 
@@ -51,8 +60,8 @@ func (m *KMSSigningMethod) Verify(signingString, signature string, keyConfig int
 
 	if cfg.verifyWithKMS {
 		formattedSig := sig
-		if m.verificationSigFormatterFunc != nil {
-			formattedSig, err = m.verificationSigFormatterFunc(sig)
+		if m.preVerificationSigFormatterFunc != nil {
+			formattedSig, err = m.preVerificationSigFormatterFunc(sig)
 			if err != nil {
 				return err
 			}
@@ -61,7 +70,7 @@ func (m *KMSSigningMethod) Verify(signingString, signature string, keyConfig int
 		verifyInput := &kms.VerifyInput{
 			KeyId:            aws.String(cfg.kmsKeyID),
 			Message:          hashedSigningString,
-			MessageType:      types.MessageType(messageTypeDigest),
+			MessageType:      types.MessageTypeDigest,
 			Signature:        formattedSig,
 			SigningAlgorithm: m.algo,
 		}
@@ -82,10 +91,15 @@ func (m *KMSSigningMethod) Verify(signingString, signature string, keyConfig int
 }
 
 func (m *KMSSigningMethod) Sign(signingString string, keyConfig interface{}) (string, error) {
+	// Expecting a jwtkms.Config as the keyConfig to use AWS KMS to Sign tokens.
 	cfg, ok := keyConfig.(*Config)
+
+	// To keep compatibility with the golang-jwt library and since we've hijacked the flow on the signing method,
+	// we check whether the keyConfig is for the expected underlying jwt.SigningMethod and proxy the call accordingly.
 	if !ok {
-		_, isBuiltInEcdsa := keyConfig.(*ecdsa.PublicKey)
-		if isBuiltInEcdsa {
+		keyConfigIsForFallbackSigningMethod := m.fallbackSigningMethodKeyConfigCheckerFunc(keyConfig)
+
+		if keyConfigIsForFallbackSigningMethod {
 			return m.fallbackSigningMethod.Sign(signingString, keyConfig)
 		}
 
@@ -103,7 +117,7 @@ func (m *KMSSigningMethod) Sign(signingString string, keyConfig interface{}) (st
 	signInput := &kms.SignInput{
 		KeyId:            aws.String(cfg.kmsKeyID),
 		Message:          hashedSigningString,
-		MessageType:      types.MessageType(messageTypeDigest),
+		MessageType:      types.MessageTypeDigest,
 		SigningAlgorithm: m.algo,
 	}
 
@@ -112,10 +126,13 @@ func (m *KMSSigningMethod) Sign(signingString string, keyConfig interface{}) (st
 		return "", err
 	}
 
-	formatted, err := m.signatureSigFormatterFunc(signOutput.Signature)
-	if err != nil {
-		return "", err
+	formattedSig := signOutput.Signature
+	if m.postSignatureSigFormatterFunc != nil {
+		formattedSig, err = m.postSignatureSigFormatterFunc(signOutput.Signature)
+		if err != nil {
+			return "", err
+		}
 	}
 
-	return jwt.EncodeSegment(formatted), nil
+	return jwt.EncodeSegment(formattedSig), nil
 }
