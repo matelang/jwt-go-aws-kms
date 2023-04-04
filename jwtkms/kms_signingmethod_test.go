@@ -43,6 +43,21 @@ func TestSigningMethod(t *testing.T) {
 			keyType:       mockkms.KeyTypeRSA2048,
 			signingMethod: SigningMethodRS512,
 		},
+		{
+			name:          "PS256",
+			keyType:       mockkms.KeyTypeRSA2048,
+			signingMethod: SigningMethodPS256,
+		},
+		{
+			name:          "PS384",
+			keyType:       mockkms.KeyTypeRSA2048,
+			signingMethod: SigningMethodPS384,
+		},
+		{
+			name:          "PS512",
+			keyType:       mockkms.KeyTypeRSA2048,
+			signingMethod: SigningMethodPS512,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
