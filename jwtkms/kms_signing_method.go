@@ -2,16 +2,83 @@ package jwtkms
 
 import (
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/asn1"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/kms/types"
 	"github.com/golang-jwt/jwt/v4"
+	"math/big"
 )
 
 type fallbackSigningMethodCompatibilityCheckerFunc func(keyConfig interface{}) bool
 type sigFormatterFunc func(sig []byte) ([]byte, error)
 
-// KMSSigningMethod is a ...
+var rsaPubKeyCheckerFunc = func(cfg interface{}) bool {
+	_, isBuiltInRSA := cfg.(*rsa.PublicKey)
+	return isBuiltInRSA
+}
+
+var ecdsaPubKeyCheckerFunc = func(cfg interface{}) bool {
+	_, isBuiltInECDSA := cfg.(*ecdsa.PublicKey)
+	return isBuiltInECDSA
+}
+
+var ecdsaVerificationSigFormatter = func(keySize int) sigFormatterFunc {
+	return func(sig []byte) ([]byte, error) {
+		r := new(big.Int).SetBytes(sig[:keySize])
+		s := new(big.Int).SetBytes(sig[keySize:])
+
+		p := struct {
+			R *big.Int
+			S *big.Int
+		}{r, s}
+
+		derSig, err := asn1.Marshal(p)
+		if err != nil {
+			return nil, err
+		}
+
+		return derSig, nil
+	}
+}
+
+var ecdsaSignerSigFormatter = func(curveBits int) sigFormatterFunc {
+	return func(sig []byte) ([]byte, error) {
+		p := struct {
+			R *big.Int
+			S *big.Int
+		}{}
+
+		_, err := asn1.Unmarshal(sig, &p)
+		if err != nil {
+			return nil, err
+		}
+
+		keyBytes := curveBits / 8
+		if curveBits%8 > 0 {
+			keyBytes++
+		}
+
+		// We serialize the outpus (r and s) into big-endian byte arrays and pad
+		// them with zeros on the left to make sure the sizes work out. Both arrays
+		// must be keyBytes long, and the output must be 2*keyBytes long.
+		rBytes := p.R.Bytes()
+		rBytesPadded := make([]byte, keyBytes)
+		copy(rBytesPadded[keyBytes-len(rBytes):], rBytes)
+
+		sBytes := p.S.Bytes()
+		sBytesPadded := make([]byte, keyBytes)
+		copy(sBytesPadded[keyBytes-len(sBytes):], sBytes)
+
+		out := append(rBytesPadded, sBytesPadded...)
+		return out, nil
+	}
+}
+
+// KMSSigningMethod is a jwt.SigningMethod that uses AWS KMS to sign JWT tokens.
 type KMSSigningMethod struct {
 	algo types.SigningAlgorithmSpec
 	hash crypto.Hash
@@ -21,15 +88,13 @@ type KMSSigningMethod struct {
 
 	preVerificationSigFormatterFunc sigFormatterFunc
 	postSignatureSigFormatterFunc   sigFormatterFunc
-
-	localVerificationFunc func(cfg *Config, hashedSigningString []byte, sig []byte) error
 }
 
 func (m *KMSSigningMethod) Alg() string {
 	return m.fallbackSigningMethod.Alg()
 }
 
-func (m *KMSSigningMethod) Verify(signingString, signature string, keyConfig interface{}) error {
+func (m *KMSSigningMethod) Verify(signingString string, signature string, keyConfig interface{}) error {
 	// Expecting a jwtkms.Config as the keyConfig to use AWS KMS to Verify tokens.
 	cfg, ok := keyConfig.(*Config)
 
@@ -87,7 +152,24 @@ func (m *KMSSigningMethod) Verify(signingString, signature string, keyConfig int
 		return nil
 	}
 
-	return m.localVerificationFunc(cfg, hashedSigningString, sig)
+	cachedKey := pubkeyCache.Get(cfg.kmsKeyID)
+	if cachedKey == nil {
+		getPubKeyOutput, err := cfg.kmsClient.GetPublicKey(cfg.ctx, &kms.GetPublicKeyInput{
+			KeyId: aws.String(cfg.kmsKeyID),
+		})
+		if err != nil {
+			return err
+		}
+
+		cachedKey, err = x509.ParsePKIXPublicKey(getPubKeyOutput.PublicKey)
+		if err != nil {
+			return err
+		}
+
+		pubkeyCache.Add(cfg.kmsKeyID, cachedKey)
+	}
+
+	return m.fallbackSigningMethod.Verify(signingString, signature, cachedKey)
 }
 
 func (m *KMSSigningMethod) Sign(signingString string, keyConfig interface{}) (string, error) {

@@ -27,23 +27,25 @@ var (
 	SigningMethodPS512 *KMSSigningMethod
 )
 
-const (
-	ecdsa256KeySize = 32
-	ecdsa384KeySize = 48
-	ecdsa512KeySize = 66
-
-	ecdsa256CurveBits = 256
-	ecdsa384CurveBits = 384
-	ecdsa512CurveBits = 521
-)
-
 var pubkeyCache = newPubKeyCache()
 
 func init() {
-	registerSigningMethods()
+	registerESSigningMethods()
+	registerRSSigningMethods()
+	registerPSSigningMethods()
 }
 
-func registerSigningMethods() {
+func registerESSigningMethods() {
+	const (
+		ecdsa256KeySize = 32
+		ecdsa384KeySize = 48
+		ecdsa512KeySize = 66
+
+		ecdsa256CurveBits = 256
+		ecdsa384CurveBits = 384
+		ecdsa512CurveBits = 521
+	)
+
 	SigningMethodECDSA256 = &KMSSigningMethod{
 		algo:                  types.SigningAlgorithmSpecEcdsaSha256,
 		hash:                  crypto.SHA256,
@@ -51,7 +53,6 @@ func registerSigningMethods() {
 		fallbackSigningMethodKeyConfigCheckerFunc: ecdsaPubKeyCheckerFunc,
 		preVerificationSigFormatterFunc:           ecdsaVerificationSigFormatter(ecdsa256KeySize),
 		postSignatureSigFormatterFunc:             ecdsaSignerSigFormatter(ecdsa256CurveBits),
-		localVerificationFunc:                     ecdsaLocalVerificationFunc(ecdsa256KeySize),
 	}
 	jwt.RegisterSigningMethod(jwt.SigningMethodES256.Alg(), func() jwt.SigningMethod {
 		return SigningMethodECDSA256
@@ -64,7 +65,6 @@ func registerSigningMethods() {
 		fallbackSigningMethodKeyConfigCheckerFunc: ecdsaPubKeyCheckerFunc,
 		preVerificationSigFormatterFunc:           ecdsaVerificationSigFormatter(ecdsa384KeySize),
 		postSignatureSigFormatterFunc:             ecdsaSignerSigFormatter(ecdsa384CurveBits),
-		localVerificationFunc:                     ecdsaLocalVerificationFunc(ecdsa384KeySize),
 	}
 	jwt.RegisterSigningMethod(jwt.SigningMethodES384.Alg(), func() jwt.SigningMethod {
 		return SigningMethodECDSA384
@@ -77,18 +77,18 @@ func registerSigningMethods() {
 		fallbackSigningMethodKeyConfigCheckerFunc: ecdsaPubKeyCheckerFunc,
 		preVerificationSigFormatterFunc:           ecdsaVerificationSigFormatter(ecdsa512KeySize),
 		postSignatureSigFormatterFunc:             ecdsaSignerSigFormatter(ecdsa512CurveBits),
-		localVerificationFunc:                     ecdsaLocalVerificationFunc(ecdsa512KeySize),
 	}
 	jwt.RegisterSigningMethod(jwt.SigningMethodES512.Alg(), func() jwt.SigningMethod {
 		return SigningMethodECDSA512
 	})
+}
 
+func registerRSSigningMethods() {
 	SigningMethodRS256 = &KMSSigningMethod{
 		algo:                  types.SigningAlgorithmSpecRsassaPkcs1V15Sha256,
 		hash:                  crypto.SHA256,
 		fallbackSigningMethod: jwt.SigningMethodRS256,
 		fallbackSigningMethodKeyConfigCheckerFunc: rsaPubKeyCheckerFunc,
-		localVerificationFunc:                     rsaPKCS1LocalVerificationFunc(crypto.SHA256),
 	}
 	jwt.RegisterSigningMethod(jwt.SigningMethodRS256.Alg(), func() jwt.SigningMethod {
 		return SigningMethodRS256
@@ -99,7 +99,6 @@ func registerSigningMethods() {
 		hash:                  crypto.SHA384,
 		fallbackSigningMethod: jwt.SigningMethodRS384,
 		fallbackSigningMethodKeyConfigCheckerFunc: rsaPubKeyCheckerFunc,
-		localVerificationFunc:                     rsaPKCS1LocalVerificationFunc(crypto.SHA384),
 	}
 	jwt.RegisterSigningMethod(jwt.SigningMethodRS384.Alg(), func() jwt.SigningMethod {
 		return SigningMethodRS384
@@ -110,18 +109,18 @@ func registerSigningMethods() {
 		hash:                  crypto.SHA512,
 		fallbackSigningMethod: jwt.SigningMethodRS512,
 		fallbackSigningMethodKeyConfigCheckerFunc: rsaPubKeyCheckerFunc,
-		localVerificationFunc:                     rsaPKCS1LocalVerificationFunc(crypto.SHA512),
 	}
 	jwt.RegisterSigningMethod(jwt.SigningMethodRS512.Alg(), func() jwt.SigningMethod {
 		return SigningMethodRS512
 	})
+}
 
+func registerPSSigningMethods() {
 	SigningMethodPS256 = &KMSSigningMethod{
 		algo:                  types.SigningAlgorithmSpecRsassaPssSha256,
 		hash:                  crypto.SHA256,
 		fallbackSigningMethod: jwt.SigningMethodPS256,
 		fallbackSigningMethodKeyConfigCheckerFunc: rsaPubKeyCheckerFunc,
-		localVerificationFunc:                     rsaPSSLocalVerificationFunc(crypto.SHA256, jwt.SigningMethodPS256.Options),
 	}
 	jwt.RegisterSigningMethod(jwt.SigningMethodPS256.Alg(), func() jwt.SigningMethod {
 		return SigningMethodPS256
@@ -132,7 +131,6 @@ func registerSigningMethods() {
 		hash:                  crypto.SHA384,
 		fallbackSigningMethod: jwt.SigningMethodPS384,
 		fallbackSigningMethodKeyConfigCheckerFunc: rsaPubKeyCheckerFunc,
-		localVerificationFunc:                     rsaPSSLocalVerificationFunc(crypto.SHA384, jwt.SigningMethodPS384.Options),
 	}
 	jwt.RegisterSigningMethod(jwt.SigningMethodPS384.Alg(), func() jwt.SigningMethod {
 		return SigningMethodPS384
@@ -143,7 +141,6 @@ func registerSigningMethods() {
 		hash:                  crypto.SHA512,
 		fallbackSigningMethod: jwt.SigningMethodPS512,
 		fallbackSigningMethodKeyConfigCheckerFunc: rsaPubKeyCheckerFunc,
-		localVerificationFunc:                     rsaPSSLocalVerificationFunc(crypto.SHA512, jwt.SigningMethodPS512.Options),
 	}
 	jwt.RegisterSigningMethod(jwt.SigningMethodPS512.Alg(), func() jwt.SigningMethod {
 		return SigningMethodPS512
