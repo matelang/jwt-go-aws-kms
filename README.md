@@ -16,6 +16,9 @@ Verification can be done both using KMS *Verify* method or locally with a cached
 | RSASSA_PKCS1_V1_5_SHA_256 | RS256     |                                   |
 | RSASSA_PKCS1_V1_5_SHA_384 | RS384     |                                   |
 | RSASSA_PKCS1_V1_5_SHA_512 | RS512     |                                   |
+| RSASSA_PSS_SHA_256        | PS256     |                                   |
+| RSASSA_PSS_SHA_384        | PS384     |                                   |
+| RSASSA_PSS_SHA_512        | PS512     |                                   |
 
 # Usage example
 See [example.go](./example/example.go)
