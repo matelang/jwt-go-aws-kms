@@ -3,7 +3,7 @@ package jwtkms
 import (
 	"testing"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/matelang/jwt-go-aws-kms/v2/jwtkms/internal/mockkms"
 )
 
