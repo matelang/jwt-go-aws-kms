@@ -3,7 +3,7 @@ module github.com/matelang/jwt-go-aws-kms/v2
 go 1.18
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.25.2
+	github.com/aws/aws-sdk-go-v2 v1.26.1
 	github.com/aws/aws-sdk-go-v2/config v1.27.4
 	github.com/aws/aws-sdk-go-v2/service/kms v1.29.1
 	github.com/golang-jwt/jwt/v5 v5.2.0
@@ -21,5 +21,5 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.20.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.23.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.28.1 // indirect
-	github.com/aws/smithy-go v1.20.1 // indirect
+	github.com/aws/smithy-go v1.20.2 // indirect
 )
