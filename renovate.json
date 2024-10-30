@@ -1,0 +1,37 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "schedule": [
+    "every 1 months on the first day of the month"
+  ],
+  "extends": [
+    "config:base"
+  ],
+  "packageRules": [
+    {
+      "matchPackagePatterns": [
+        "*"
+      ],
+      "matchManagers": [
+        "gomod"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
+      "postUpdateOptions": ["gomodTidy", "gomodUpdateImportPaths"],
+      "groupName": "all non-major golang dependencies",
+      "groupSlug": "all-minor-patch-golang"
+    },
+    {
+      "matchPackagePatterns": [
+        "*"
+      ],
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "all github action dependencies",
+      "groupSlug": "all-gha"
+    }
+  ]
+}
