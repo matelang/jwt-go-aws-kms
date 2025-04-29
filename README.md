@@ -6,8 +6,6 @@ It will *Sign* a JWT token using an asymmetric key stored in AWS KMS.
 
 Verification can be done both using KMS *Verify* method or locally with a cached public key (default).
 
-The minimum supported GoLang version is `1.20`, since `github.com/aws/aws-sdk-go-v2 v1.28.0` fails to build with anything older.
-
 # Supported key types
 | Signature Algorithm       | JWT `alg` | Note                              |
 |---------------------------|-----------|-----------------------------------|
