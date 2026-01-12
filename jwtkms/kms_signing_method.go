@@ -63,7 +63,7 @@ var ecdsaSignerSigFormatter = func(curveBits int) sigFormatterFunc {
 			keyBytes++
 		}
 
-		// We serialize the outpus (r and s) into big-endian byte arrays and pad
+		// We serialize the outputs (r and s) into big-endian byte arrays and pad
 		// them with zeros on the left to make sure the sizes work out. Both arrays
 		// must be keyBytes long, and the output must be 2*keyBytes long.
 		rBytes := p.R.Bytes()
