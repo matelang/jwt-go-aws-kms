@@ -127,11 +127,11 @@ func (k *MockKMS) Sign(_ context.Context, in *kms.SignInput, _ ...func(*kms.Opti
 		case types.SigningAlgorithmSpecRsassaPssSha256, types.SigningAlgorithmSpecRsassaPssSha384, types.SigningAlgorithmSpecRsassaPssSha512:
 			return signRSAPSS(key, in, &rsa.PSSOptions{})
 		default:
-			panic("unsupported signingalgorithm for rsa key")
+			return nil, fmt.Errorf("unsupported signing algorithm %v for RSA key", in.SigningAlgorithm)
 		}
 
 	default:
-		panic("unreachable")
+		return nil, fmt.Errorf("unsupported key type: %T", key)
 	}
 }
 
@@ -143,7 +143,7 @@ var ecdsaSigningAlgorithms = map[types.SigningAlgorithmSpec]bool{
 
 func signECSDA(key *ecdsa.PrivateKey, in *kms.SignInput) (*kms.SignOutput, error) {
 	if !ecdsaSigningAlgorithms[in.SigningAlgorithm] {
-		return nil, fmt.Errorf("unknowning signing algorithm: %v", in.SigningAlgorithm)
+		return nil, fmt.Errorf("unknown signing algorithm: %v", in.SigningAlgorithm)
 	}
 
 	sig, err := key.Sign(rand.Reader, in.Message, nil)
@@ -216,11 +216,11 @@ func (k *MockKMS) Verify(ctx context.Context, in *kms.VerifyInput, optFns ...fun
 		case types.SigningAlgorithmSpecRsassaPssSha256, types.SigningAlgorithmSpecRsassaPssSha384, types.SigningAlgorithmSpecRsassaPssSha512:
 			return verifyRSAPSS(key, in, &rsa.PSSOptions{})
 		default:
-			panic("invalid signingalgo for rsa key")
+			return nil, fmt.Errorf("unsupported signing algorithm %v for RSA key", in.SigningAlgorithm)
 		}
 
 	default:
-		panic("unreachable")
+		return nil, fmt.Errorf("unsupported key type: %T", key)
 	}
 }
 
