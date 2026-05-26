@@ -1,0 +1,25 @@
+name: Fuzz
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    name: Short fuzz run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.x'
+          check-latest: true
+
+      - name: Fuzz ECDSA formatter (2 minutes)
+        run: go test -run=- -fuzz=FuzzECDSAFormatterRoundTrip -fuzztime=120s ./jwtkms/...

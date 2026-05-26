@@ -1,0 +1,10 @@
+# Default owners for the entire repo
+* @matelang
+
+# Crypto / JWT code — require maintainer review
+/jwtkms/                        @matelang
+
+# CI / security workflows
+/.github/workflows/             @matelang
+/.golangci.yml                  @matelang
+/SECURITY.md                    @matelang

@@ -29,8 +29,14 @@ type Config struct {
 
 	// If set to true JWT verification will be performed using KMS's Verify method
 	//
-	// In normal scenarios this can be left on the default false value, which will get, cache(forever) in memory and
-	// use the KMS key's public key to verify signatures
+	// In normal scenarios this can be left on the default false value, which will get the KMS key's public key
+	// once and cache it in memory for the lifetime of the process. Subsequent verifications use the cached key
+	// and standard golang-jwt verification — no KMS calls.
+	//
+	// Note on key rotation: by default the cache has no TTL, so KMS-side key rotations will not be picked up
+	// until the process restarts. Use SetPubKeyCacheTTL to enable expiry, or ClearPubKeyCache to force a refresh.
+	// Set verifyWithKMS=true if you want every verification to hit KMS (always uses current key material,
+	// at the cost of higher latency and per-verification KMS billing).
 	verifyWithKMS bool
 }
 

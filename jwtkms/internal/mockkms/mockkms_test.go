@@ -110,7 +110,7 @@ func TestSignECDSA(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Error signing: %v", err)
 			}
-			if signOutput.Signature == nil || len(signOutput.Signature) == 0 {
+			if len(signOutput.Signature) == 0 {
 				t.Error("Expected non-empty signature")
 			}
 
@@ -168,7 +168,7 @@ func TestSignRSAPKCS1(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Error signing: %v", err)
 			}
-			if signOutput.Signature == nil || len(signOutput.Signature) == 0 {
+			if len(signOutput.Signature) == 0 {
 				t.Error("Expected non-empty signature")
 			}
 
@@ -226,7 +226,7 @@ func TestSignRSAPSS(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Error signing: %v", err)
 			}
-			if signOutput.Signature == nil || len(signOutput.Signature) == 0 {
+			if len(signOutput.Signature) == 0 {
 				t.Error("Expected non-empty signature")
 			}
 
@@ -370,7 +370,7 @@ func TestGetPublicKey(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Error getting public key: %v", err)
 			}
-			if output.PublicKey == nil || len(output.PublicKey) == 0 {
+			if len(output.PublicKey) == 0 {
 				t.Error("Expected non-empty public key")
 			}
 		})

@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/asn1"
+	"fmt"
 	"math/big"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -14,15 +15,15 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type fallbackSigningMethodCompatibilityCheckerFunc func(keyConfig interface{}) bool
+type fallbackSigningMethodCompatibilityCheckerFunc func(keyConfig any) bool
 type sigFormatterFunc func(sig []byte) ([]byte, error)
 
-var rsaPubKeyCheckerFunc = func(cfg interface{}) bool {
+var rsaPubKeyCheckerFunc = func(cfg any) bool {
 	_, isBuiltInRSA := cfg.(*rsa.PublicKey)
 	return isBuiltInRSA
 }
 
-var ecdsaPubKeyCheckerFunc = func(cfg interface{}) bool {
+var ecdsaPubKeyCheckerFunc = func(cfg any) bool {
 	_, isBuiltInECDSA := cfg.(*ecdsa.PublicKey)
 	return isBuiltInECDSA
 }
@@ -57,6 +58,12 @@ var ecdsaSignerSigFormatter = func(curveBits int) sigFormatterFunc {
 		if err != nil {
 			return nil, err
 		}
+		if p.R == nil || p.S == nil {
+			return nil, fmt.Errorf("ecdsa signature missing R or S")
+		}
+		if p.R.Sign() < 0 || p.S.Sign() < 0 {
+			return nil, fmt.Errorf("ecdsa signature contains negative integer")
+		}
 
 		keyBytes := curveBits / 8
 		if curveBits%8 > 0 {
@@ -67,14 +74,13 @@ var ecdsaSignerSigFormatter = func(curveBits int) sigFormatterFunc {
 		// them with zeros on the left to make sure the sizes work out. Both arrays
 		// must be keyBytes long, and the output must be 2*keyBytes long.
 		rBytes := p.R.Bytes()
-		rBytesPadded := make([]byte, keyBytes)
-		copy(rBytesPadded[keyBytes-len(rBytes):], rBytes)
-
 		sBytes := p.S.Bytes()
-		sBytesPadded := make([]byte, keyBytes)
-		copy(sBytesPadded[keyBytes-len(sBytes):], sBytes)
-
-		out := append(rBytesPadded, sBytesPadded...)
+		if len(rBytes) > keyBytes || len(sBytes) > keyBytes {
+			return nil, fmt.Errorf("ecdsa signature components exceed expected size for curve (%d bytes)", keyBytes)
+		}
+		out := make([]byte, 2*keyBytes)
+		copy(out[keyBytes-len(rBytes):keyBytes], rBytes)
+		copy(out[2*keyBytes-len(sBytes):], sBytes)
 		return out, nil
 	}
 }
@@ -95,7 +101,7 @@ func (m *KMSSigningMethod) Alg() string {
 	return m.fallbackSigningMethod.Alg()
 }
 
-func (m *KMSSigningMethod) Verify(signingString string, sig []byte, keyConfig interface{}) (err error) {
+func (m *KMSSigningMethod) Verify(signingString string, sig []byte, keyConfig any) (err error) {
 	// Expecting a jwtkms.Config as the keyConfig to use AWS KMS to Verify tokens.
 	cfg, ok := keyConfig.(*Config)
 
@@ -138,7 +144,7 @@ func (m *KMSSigningMethod) Verify(signingString string, sig []byte, keyConfig in
 
 		verifyOutput, err := cfg.kmsClient.Verify(cfg.ctx, verifyInput)
 		if err != nil {
-			return err
+			return fmt.Errorf("kms verify: %w", err)
 		}
 
 		if !verifyOutput.SignatureValid {
@@ -154,12 +160,12 @@ func (m *KMSSigningMethod) Verify(signingString string, sig []byte, keyConfig in
 			KeyId: aws.String(cfg.kmsKeyID),
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("kms get public key: %w", err)
 		}
 
 		cachedKey, err = x509.ParsePKIXPublicKey(getPubKeyOutput.PublicKey)
 		if err != nil {
-			return err
+			return fmt.Errorf("parsing kms public key: %w", err)
 		}
 
 		pubkeyCache.Add(cfg.kmsKeyID, cachedKey)
@@ -168,7 +174,7 @@ func (m *KMSSigningMethod) Verify(signingString string, sig []byte, keyConfig in
 	return m.fallbackSigningMethod.Verify(signingString, sig, cachedKey)
 }
 
-func (m *KMSSigningMethod) Sign(signingString string, keyConfig interface{}) ([]byte, error) {
+func (m *KMSSigningMethod) Sign(signingString string, keyConfig any) ([]byte, error) {
 	// Expecting a jwtkms.Config as the keyConfig to use AWS KMS to Sign tokens.
 	cfg, ok := keyConfig.(*Config)
 
@@ -201,7 +207,7 @@ func (m *KMSSigningMethod) Sign(signingString string, keyConfig interface{}) ([]
 
 	signOutput, err := cfg.kmsClient.Sign(cfg.ctx, signInput)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("kms sign: %w", err)
 	}
 
 	formattedSig := signOutput.Signature

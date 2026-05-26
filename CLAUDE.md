@@ -48,7 +48,9 @@ go mod tidy
 
 **Public Key Cache** (`jwtkms/pubkey_cache.go`)
 - Thread-safe in-memory cache of KMS public keys (maps key ID to crypto.PublicKey)
-- Cache is permanent (no TTL or eviction) to avoid repeated KMS GetPublicKey calls
+- Process-global singleton (`pubkeyCache` in `init.go`)
+- Default: no TTL — cache is permanent until process restart
+- Configurable via `SetPubKeyCacheTTL(d)` / `ClearPubKeyCache()` for rotation handling
 - Used during local verification when `verifyWithKMS=false`
 
 **Registration System** (`jwtkms/init.go`)

@@ -84,14 +84,14 @@ func TestSigningMethod(t *testing.T) {
 			}
 
 			var claims jwt.MapClaims
-			_, err = jwt.ParseWithClaims(signed, &claims, func(*jwt.Token) (interface{}, error) {
+			_, err = jwt.ParseWithClaims(signed, &claims, func(*jwt.Token) (any, error) {
 				return NewKMSConfig(kms, id, false), nil
 			})
 			if err != nil {
 				t.Fatalf("Error validating token offline: %v", err)
 			}
 
-			_, err = jwt.ParseWithClaims(signed, &claims, func(*jwt.Token) (interface{}, error) {
+			_, err = jwt.ParseWithClaims(signed, &claims, func(*jwt.Token) (any, error) {
 				return NewKMSConfig(kms, id, true), nil
 			})
 			if err != nil {
@@ -113,7 +113,8 @@ func TestConfigWithContext(t *testing.T) {
 		t.Error("Expected default context to be Background()")
 	}
 
-	customCtx := context.WithValue(context.Background(), "test", "value")
+	type ctxKey string
+	customCtx := context.WithValue(context.Background(), ctxKey("test"), "value")
 	configWithCtx := config.WithContext(customCtx)
 
 	if configWithCtx.ctx != customCtx {
@@ -172,7 +173,7 @@ func TestSigningMethodFallbackToStandardJWT(t *testing.T) {
 
 		// Verify with public key
 		var claims jwt.MapClaims
-		_, err = jwt.ParseWithClaims(signed, &claims, func(*jwt.Token) (interface{}, error) {
+		_, err = jwt.ParseWithClaims(signed, &claims, func(*jwt.Token) (any, error) {
 			return &ecdsaKey.PublicKey, nil
 		})
 		if err != nil {
@@ -199,7 +200,7 @@ func TestSigningMethodFallbackToStandardJWT(t *testing.T) {
 
 		// Verify with public key
 		var claims jwt.MapClaims
-		_, err = jwt.ParseWithClaims(signed, &claims, func(*jwt.Token) (interface{}, error) {
+		_, err = jwt.ParseWithClaims(signed, &claims, func(*jwt.Token) (any, error) {
 			return &rsaKey.PublicKey, nil
 		})
 		if err != nil {
@@ -229,7 +230,7 @@ func TestVerifyWithInvalidSignature(t *testing.T) {
 	tamperedToken := signed[:len(signed)-10] + "tamperedXX"
 
 	var claims jwt.MapClaims
-	_, err = jwt.ParseWithClaims(tamperedToken, &claims, func(*jwt.Token) (interface{}, error) {
+	_, err = jwt.ParseWithClaims(tamperedToken, &claims, func(*jwt.Token) (any, error) {
 		return config, nil
 	})
 	if err == nil {
@@ -257,7 +258,7 @@ func TestVerifyWithNonExistentKey(t *testing.T) {
 	// Try to verify with a non-existent key
 	badConfig := NewKMSConfig(kms, "non-existent-key-id", false)
 	var claims jwt.MapClaims
-	_, err = jwt.ParseWithClaims(signed, &claims, func(*jwt.Token) (interface{}, error) {
+	_, err = jwt.ParseWithClaims(signed, &claims, func(*jwt.Token) (any, error) {
 		return badConfig, nil
 	})
 	if err == nil {

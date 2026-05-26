@@ -32,13 +32,13 @@ const (
 // is safe for concurrent use.
 type MockKMS struct {
 	mu   sync.Mutex
-	keys map[string]interface{}
+	keys map[string]any
 }
 
 // NewMockKMS constructs a new MockKMS instance.
 func NewMockKMS() *MockKMS {
 	return &MockKMS{
-		keys: make(map[string]interface{}),
+		keys: make(map[string]any),
 	}
 }
 
@@ -46,7 +46,7 @@ func NewMockKMS() *MockKMS {
 // KeyId which can be used by subsequent calls to refer to the generated key.
 func (k *MockKMS) GenerateKey(kt KeyType) (string, error) {
 	var err error
-	var key interface{}
+	var key any
 	switch kt {
 	case KeyTypeECCNISTP256, KeyTypeECCNISTP384, KeyTypeECCNISTP521:
 		key, err = generateECCKey(kt)
@@ -96,7 +96,7 @@ func generateRSAKey(kt KeyType) (*rsa.PrivateKey, error) {
 	return pk, nil
 }
 
-func (k *MockKMS) getKey(id string) (interface{}, error) {
+func (k *MockKMS) getKey(id string) (any, error) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	key, ok := k.keys[id]
@@ -262,7 +262,7 @@ func (k *MockKMS) GetPublicKey(_ context.Context, in *kms.GetPublicKeyInput, _ .
 		return nil, err
 	}
 
-	var public interface{}
+	var public any
 	switch key := key.(type) {
 	case *ecdsa.PrivateKey:
 		public = &key.PublicKey

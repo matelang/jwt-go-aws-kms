@@ -1,0 +1,38 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gosec
+    - revive
+    - misspell
+    - bodyclose
+    - gocritic
+    - prealloc
+    - unconvert
+
+  settings:
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+    gosec:
+      excludes:
+        # G104 - Errors unhandled. We deliberately ignore hash.Write errors per crypto/hash contract.
+        - G104
+
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - gosec
+          - prealloc
