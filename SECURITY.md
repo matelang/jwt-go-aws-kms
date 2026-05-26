@@ -20,9 +20,9 @@ a release.
 Use GitHub's private vulnerability reporting:
 <https://github.com/matelang/jwt-go-aws-kms/security/advisories/new>
 
-If you cannot use that channel, email the maintainer
-(798365+matelang@users.noreply.github.com) with the subject prefix `[jwt-go-aws-kms security]`
-and include:
+If you cannot use that channel, email the maintainer at
+798365+matelang@users.noreply.github.com with the subject prefix
+`[jwt-go-aws-kms security]` and include:
 
 - A description of the issue and its impact
 - Steps to reproduce, ideally with a minimal Go program or test
