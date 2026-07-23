@@ -4,7 +4,6 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
-	"crypto/x509"
 	"encoding/asn1"
 	"fmt"
 	"math/big"
@@ -156,19 +155,11 @@ func (m *KMSSigningMethod) Verify(signingString string, sig []byte, keyConfig an
 
 	cachedKey := pubkeyCache.Get(cfg.kmsKeyID)
 	if cachedKey == nil {
-		getPubKeyOutput, err := cfg.kmsClient.GetPublicKey(cfg.ctx, &kms.GetPublicKeyInput{
-			KeyId: aws.String(cfg.kmsKeyID),
-		})
+		var err error
+		cachedKey, err = fetchAndCachePublicKey(cfg.ctx, cfg.kmsClient, cfg.kmsKeyID)
 		if err != nil {
-			return fmt.Errorf("kms get public key: %w", err)
+			return err
 		}
-
-		cachedKey, err = x509.ParsePKIXPublicKey(getPubKeyOutput.PublicKey)
-		if err != nil {
-			return fmt.Errorf("parsing kms public key: %w", err)
-		}
-
-		pubkeyCache.Add(cfg.kmsKeyID, cachedKey)
 	}
 
 	return m.fallbackSigningMethod.Verify(signingString, sig, cachedKey)
