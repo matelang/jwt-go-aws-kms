@@ -43,3 +43,15 @@ jobs:
         with:
           name: coverage
           path: coverage.out
+
+  # Branch protection requires a check named "build". This job gives the
+  # matrix one stable name, so the Go versions can change without a
+  # settings change. It runs even when a matrix job fails, and fails then.
+  build:
+    name: build
+    needs: build-test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check matrix result
+        run: test "${{ needs.build-test.result }}" = "success"
