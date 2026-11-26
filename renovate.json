@@ -1,12 +1,25 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "schedule": [
-    "every 1 months on the first day of the month"
-  ],
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    "schedule:monthly"
+  ],
+  "configMigration": true,
+  "postUpdateOptions": [
+    "gomodTidy",
+    "gomodUpdateImportPaths"
   ],
   "packageRules": [
+    {
+      "description": "The go directive tracks the oldest supported Go release. Raise it by hand when Go drops a release.",
+      "matchManagers": [
+        "gomod"
+      ],
+      "matchDepTypes": [
+        "golang"
+      ],
+      "enabled": false
+    },
     {
       "matchManagers": [
         "gomod"
@@ -16,25 +29,15 @@
         "patch",
         "digest"
       ],
-      "postUpdateOptions": [
-        "gomodTidy",
-        "gomodUpdateImportPaths"
-      ],
       "groupName": "all non-major golang dependencies",
-      "groupSlug": "all-minor-patch-golang",
-      "matchPackageNames": [
-        "*"
-      ]
+      "groupSlug": "all-minor-patch-golang"
     },
     {
       "matchManagers": [
         "github-actions"
       ],
       "groupName": "all github action dependencies",
-      "groupSlug": "all-gha",
-      "matchPackageNames": [
-        "*"
-      ]
+      "groupSlug": "all-gha"
     }
   ]
 }
