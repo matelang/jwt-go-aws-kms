@@ -5,7 +5,7 @@ so changes are held to a high correctness and security bar.
 
 ## Local development
 
-Required: Go 1.24 or newer (CI runs the matrix 1.24 → 1.26).
+Required: Go 1.26 or newer. The library follows the Go release policy: it supports the two newest Go releases, and CI tests both (1.26 and 1.27).
 
 ```bash
 # Build everything

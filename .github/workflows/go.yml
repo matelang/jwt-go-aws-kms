@@ -16,12 +16,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go: [ '1.24.x', '1.25.x', '1.26.x' ]
+        go: [ '1.26.x', '1.27.x' ]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go }}
           check-latest: true
@@ -38,7 +38,7 @@ jobs:
         run: go test -race -covermode=atomic -coverprofile=coverage.out -v ./...
 
       - name: Upload coverage artifact
-        if: matrix.go == '1.26.x'
+        if: matrix.go == '1.27.x'
         uses: actions/upload-artifact@v7
         with:
           name: coverage
